@@ -1,0 +1,16 @@
+{
+  "project": "Apartment - fixed areas",
+  "footprint": {"width": 14.0},
+  "rooms": [
+    {"type": "entrance", "area": 5},
+    {"type": "salon", "area": 22},
+    {"type": "living", "area": 20},
+    {"type": "kitchen", "area": 12},
+    {"type": "guest_wc", "area": 3},
+    {"type": "master", "area": 18},
+    {"type": "ensuite", "area": 5},
+    {"type": "bedroom", "area": 14, "occupants": 2},
+    {"type": "bedroom", "area": 12, "occupants": 1},
+    {"type": "bathroom", "area": 5}
+  ]
+}

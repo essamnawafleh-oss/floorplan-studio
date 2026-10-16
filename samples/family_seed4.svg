@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 1010" width="1300" height="1010">
+<style>
+  .wall{fill:#26282c;fill-rule:evenodd}
+  .room{stroke:none}
+  .door{fill:none;stroke:#3a3d42;stroke-width:1.4}
+  .swing{fill:none;stroke:#3a3d42;stroke-width:0.8;stroke-dasharray:4 3}
+  .win{fill:#ffffff;stroke:#3a3d42;stroke-width:1}
+  .glass{stroke:#4a7fb5;stroke-width:1.2}
+  .name{font-family:'Noto Naskh Arabic','Segoe UI','Tahoma','Arial',sans-serif;font-weight:700;fill:#22252a;text-anchor:middle}
+  .area{font-family:'Noto Naskh Arabic','Segoe UI','Tahoma','Arial',sans-serif;fill:#555a62;text-anchor:middle}
+  .dim{stroke:#7a7f87;stroke-width:0.8}
+  .tick{stroke:#7a7f87;stroke-width:1.2}
+  .dimt{font-family:'Noto Naskh Arabic','Segoe UI','Tahoma','Arial',sans-serif;font-size:12px;fill:#4a4f57;text-anchor:middle}
+  .title{font-family:'Noto Naskh Arabic','Segoe UI','Tahoma','Arial',sans-serif;font-size:18px;font-weight:700;fill:#22252a}
+  .meta{font-family:'Noto Naskh Arabic','Segoe UI','Tahoma','Arial',sans-serif;font-size:12px;fill:#666b73}
+</style>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<rect x="128.0" y="707.7" width="223.8" height="144.3" fill="#f6ead7" class="room"/>
+<rect x="128.0" y="377.0" width="338.0" height="321.7" fill="#f6ead7" class="room"/>
+<rect x="360.8" y="707.7" width="105.2" height="144.3" fill="#e3efe4" class="room"/>
+<rect x="475.0" y="345.9" width="262.7" height="506.1" fill="#f6ead7" class="room"/>
+<rect x="475.0" y="108.0" width="262.7" height="228.9" fill="#f6ead7" class="room"/>
+<rect x="218.1" y="108.0" width="247.9" height="260.0" fill="#e3efe4" class="room"/>
+<rect x="128.0" y="108.0" width="81.1" height="260.0" fill="#e3efe4" class="room"/>
+<rect x="746.7" y="513.9" width="255.5" height="338.1" fill="#e4ebf6" class="room"/>
+<rect x="1011.2" y="685.2" width="160.8" height="166.8" fill="#e4ebf6" class="room"/>
+<rect x="746.7" y="108.0" width="231.7" height="324.9" fill="#e4ebf6" class="room"/>
+<rect x="987.4" y="108.0" width="184.6" height="324.9" fill="#e4ebf6" class="room"/>
+<rect x="1011.2" y="513.9" width="160.8" height="162.3" fill="#e4ebf6" class="room"/>
+<rect x="746.7" y="441.9" width="425.3" height="63.0" fill="#f1f1ef" class="room"/>
+<path d="M110.0,607.6 L128.0,607.6 L128.0,698.7 L140.0,698.7 L140.0,707.7 L128.0,707.7 L128.0,852.0 L206.2,852.0 L206.2,870.0 L110.0,870.0 L110.0,607.6 Z" class="wall"/>
+<path d="M110.0,258.3 L128.0,258.3 L128.0,368.0 L209.1,368.0 L209.1,360.5 L218.1,360.5 L218.1,368.0 L466.0,368.0 L466.0,329.4 L475.0,329.4 L475.0,336.9 L482.5,336.9 L482.5,345.9 L475.0,345.9 L475.0,637.2 L466.0,637.2 L466.0,377.0 L128.0,377.0 L128.0,468.2 L110.0,468.2 L110.0,258.3 Z" class="wall"/>
+<path d="M110.0,90.0 L300.7,90.0 L300.7,108.0 L218.1,108.0 L218.1,312.5 L209.1,312.5 L209.1,108.0 L128.0,108.0 L128.0,222.3 L110.0,222.3 L110.0,90.0 Z" class="wall"/>
+<path d="M567.8,90.0 L567.8,108.0 L475.0,108.0 L475.0,275.4 L466.0,275.4 L466.0,108.0 L383.4,108.0 L383.4,90.0 L567.8,90.0 Z" class="wall"/>
+<path d="M814.3,90.0 L814.3,108.0 L746.7,108.0 L746.7,432.9 L916.9,432.9 L916.9,441.9 L746.7,441.9 L746.7,446.4 L737.7,446.4 L737.7,345.9 L536.5,345.9 L536.5,336.9 L737.7,336.9 L737.7,108.0 L644.9,108.0 L644.9,90.0 L814.3,90.0 Z" class="wall"/>
+<path d="M1190.0,90.0 L1190.0,234.3 L1172.0,234.3 L1172.0,311.2 L1190.0,311.2 L1190.0,577.1 L1172.0,577.1 L1172.0,613.1 L1190.0,613.1 L1190.0,748.4 L1172.0,748.4 L1172.0,784.4 L1190.0,784.4 L1190.0,870.0 L929.8,870.0 L929.8,852.0 L1002.2,852.0 L1002.2,740.7 L1011.2,740.7 L1011.2,852.0 L1172.0,852.0 L1172.0,685.2 L1011.2,685.2 L1011.2,692.7 L1002.2,692.7 L1002.2,513.9 L994.7,513.9 L994.7,504.9 L1018.7,504.9 L1018.7,513.9 L1011.2,513.9 L1011.2,676.2 L1172.0,676.2 L1172.0,513.9 L1066.7,513.9 L1066.7,504.9 L1172.0,504.9 L1172.0,441.9 L1048.9,441.9 L1048.9,432.9 L1172.0,432.9 L1172.0,108.0 L987.4,108.0 L987.4,432.9 L994.9,432.9 L994.9,441.9 L970.9,441.9 L970.9,432.9 L978.4,432.9 L978.4,108.0 L910.8,108.0 L910.8,90.0 L1190.0,90.0 Z" class="wall"/>
+<path d="M678.4,870.0 L678.4,852.0 L737.7,852.0 L737.7,500.4 L746.7,500.4 L746.7,504.9 L940.7,504.9 L940.7,513.9 L746.7,513.9 L746.7,852.0 L819.1,852.0 L819.1,870.0 L678.4,870.0 Z" class="wall"/>
+<path d="M431.4,870.0 L431.4,852.0 L466.0,852.0 L466.0,707.7 L360.8,707.7 L360.8,792.0 L351.8,792.0 L351.8,707.7 L194.0,707.7 L194.0,698.7 L466.0,698.7 L466.0,691.2 L475.0,691.2 L475.0,852.0 L534.4,852.0 L534.4,870.0 L431.4,870.0 Z" class="wall"/>
+<path d="M278.2,870.0 L278.2,852.0 L351.8,852.0 L351.8,840.0 L360.8,840.0 L360.8,852.0 L395.4,852.0 L395.4,870.0 L278.2,870.0 Z" class="wall"/>
+<line x1="206.2" y1="852.0" x2="206.2" y2="780.0" class="door"/>
+<polyline points="206.2,780.0 213.2,780.3 220.2,781.4 227.1,783.1 233.7,785.5 240.1,788.5 246.2,792.1 251.8,796.3 257.1,801.1 261.8,806.3 266.0,812.0 269.7,818.1 272.7,824.4 275.1,831.1 276.8,838.0 277.8,844.9 278.2,852.0" class="swing"/>
+<line x1="140.0" y1="698.7" x2="140.0" y2="644.7" class="door"/>
+<polyline points="140.0,644.7 145.3,645.0 150.5,645.7 155.7,647.0 160.7,648.8 165.5,651.1 170.0,653.8 174.3,657.0 178.2,660.5 181.7,664.4 184.9,668.7 187.6,673.2 189.9,678.0 191.7,683.0 193.0,688.2 193.7,693.4 194.0,698.7" class="swing"/>
+<line x1="360.8" y1="840.0" x2="408.8" y2="840.0" class="door"/>
+<polyline points="408.8,840.0 408.6,835.3 407.9,830.6 406.8,826.1 405.2,821.6 403.2,817.4 400.7,813.3 397.9,809.5 394.8,806.1 391.3,802.9 387.5,800.1 383.5,797.7 379.2,795.7 374.8,794.1 370.2,792.9 365.5,792.2 360.8,792.0" class="swing"/>
+<line x1="475.0" y1="691.2" x2="529.0" y2="691.2" class="door"/>
+<polyline points="529.0,691.2 528.7,685.9 528.0,680.7 526.7,675.5 524.9,670.5 522.6,665.7 519.9,661.2 516.8,656.9 513.2,653.0 509.3,649.5 505.0,646.3 500.5,643.6 495.7,641.3 490.7,639.5 485.5,638.2 480.3,637.5 475.0,637.2" class="swing"/>
+<line x1="482.5" y1="336.9" x2="482.5" y2="282.9" class="door"/>
+<polyline points="482.5,282.9 487.8,283.2 493.0,283.9 498.2,285.2 503.2,287.0 508.0,289.3 512.5,292.0 516.8,295.2 520.7,298.7 524.3,302.7 527.4,306.9 530.1,311.5 532.4,316.2 534.2,321.2 535.5,326.4 536.2,331.6 536.5,336.9" class="swing"/>
+<line x1="466.0" y1="329.4" x2="412.0" y2="329.4" class="door"/>
+<polyline points="412.0,329.4 412.3,324.1 413.0,318.9 414.3,313.7 416.1,308.7 418.4,304.0 421.1,299.4 424.3,295.2 427.8,291.2 431.8,287.7 436.0,284.5 440.6,281.8 445.3,279.5 450.3,277.7 455.5,276.4 460.7,275.7 466.0,275.4" class="swing"/>
+<line x1="209.1" y1="360.5" x2="161.1" y2="360.5" class="door"/>
+<polyline points="161.1,360.5 161.4,355.8 162.0,351.2 163.2,346.6 164.8,342.2 166.8,337.9 169.2,333.9 172.0,330.1 175.2,326.6 178.7,323.4 182.5,320.6 186.5,318.2 190.8,316.2 195.2,314.6 199.8,313.5 204.4,312.8 209.1,312.5" class="swing"/>
+<line x1="746.7" y1="500.4" x2="800.7" y2="500.4" class="door"/>
+<polyline points="800.7,500.4 800.5,495.1 799.7,489.9 798.4,484.7 796.6,479.7 794.4,475.0 791.6,470.4 788.5,466.2 784.9,462.2 781.0,458.7 776.7,455.5 772.2,452.8 767.4,450.5 762.4,448.7 757.3,447.4 752.0,446.7 746.7,446.4" class="swing"/>
+<line x1="994.7" y1="513.9" x2="994.7" y2="567.9" class="door"/>
+<polyline points="994.7,567.9 989.4,567.7 984.2,566.9 979.0,565.6 974.0,563.8 969.2,561.5 964.7,558.8 960.4,555.7 956.5,552.1 953.0,548.2 949.8,543.9 947.1,539.4 944.8,534.6 943.0,529.6 941.7,524.4 941.0,519.2 940.7,513.9" class="swing"/>
+<line x1="1011.2" y1="692.7" x2="1059.2" y2="692.7" class="door"/>
+<polyline points="1059.2,692.7 1059.0,697.4 1058.3,702.1 1057.1,706.6 1055.6,711.1 1053.5,715.3 1051.1,719.4 1048.3,723.2 1045.1,726.6 1041.7,729.8 1037.9,732.6 1033.8,735.0 1029.6,737.1 1025.1,738.6 1020.6,739.8 1015.9,740.5 1011.2,740.7" class="swing"/>
+<line x1="970.9" y1="432.9" x2="970.9" y2="378.9" class="door"/>
+<polyline points="970.9,378.9 965.6,379.2 960.4,379.9 955.2,381.2 950.2,383.0 945.4,385.3 940.9,388.0 936.6,391.2 932.7,394.7 929.2,398.7 926.0,402.9 923.3,407.5 921.0,412.2 919.2,417.2 917.9,422.4 917.2,427.6 916.9,432.9" class="swing"/>
+<line x1="994.9" y1="432.9" x2="994.9" y2="378.9" class="door"/>
+<polyline points="994.9,378.9 1000.2,379.2 1005.4,379.9 1010.6,381.2 1015.6,383.0 1020.4,385.3 1024.9,388.0 1029.2,391.2 1033.1,394.7 1036.6,398.7 1039.8,402.9 1042.5,407.5 1044.8,412.2 1046.6,417.2 1047.9,422.4 1048.6,427.6 1048.9,432.9" class="swing"/>
+<line x1="1018.7" y1="513.9" x2="1018.7" y2="561.9" class="door"/>
+<polyline points="1018.7,561.9 1023.4,561.7 1028.1,561.0 1032.6,559.8 1037.1,558.3 1041.3,556.2 1045.4,553.8 1049.2,551.0 1052.6,547.9 1055.8,544.4 1058.6,540.6 1061.0,536.5 1063.1,532.3 1064.6,527.8 1065.8,523.3 1066.5,518.6 1066.7,513.9" class="swing"/>
+<rect x="110.0" y="468.2" width="18.0" height="139.4" class="win"/>
+<line x1="119.0" y1="468.2" x2="119.0" y2="607.6" class="glass"/>
+<rect x="395.4" y="852.0" width="36.0" height="18.0" class="win"/>
+<line x1="395.4" y1="861.0" x2="431.4" y2="861.0" class="glass"/>
+<rect x="534.4" y="852.0" width="144.0" height="18.0" class="win"/>
+<line x1="534.4" y1="861.0" x2="678.4" y2="861.0" class="glass"/>
+<rect x="567.8" y="90.0" width="77.1" height="18.0" class="win"/>
+<line x1="567.8" y1="99.0" x2="644.9" y2="99.0" class="glass"/>
+<rect x="300.7" y="90.0" width="82.6" height="18.0" class="win"/>
+<line x1="300.7" y1="99.0" x2="383.4" y2="99.0" class="glass"/>
+<rect x="110.0" y="222.3" width="18.0" height="36.0" class="win"/>
+<line x1="119.0" y1="222.3" x2="119.0" y2="258.3" class="glass"/>
+<rect x="819.1" y="852.0" width="110.7" height="18.0" class="win"/>
+<line x1="819.1" y1="861.0" x2="929.8" y2="861.0" class="glass"/>
+<rect x="1172.0" y="748.4" width="18.0" height="36.0" class="win"/>
+<line x1="1181.0" y1="748.4" x2="1181.0" y2="784.4" class="glass"/>
+<rect x="814.3" y="90.0" width="96.5" height="18.0" class="win"/>
+<line x1="814.3" y1="99.0" x2="910.8" y2="99.0" class="glass"/>
+<rect x="1172.0" y="234.3" width="18.0" height="76.9" class="win"/>
+<line x1="1181.0" y1="234.3" x2="1181.0" y2="311.2" class="glass"/>
+<rect x="1172.0" y="577.1" width="18.0" height="36.0" class="win"/>
+<line x1="1181.0" y1="577.1" x2="1181.0" y2="613.1" class="glass"/>
+<text x="239.9" y="761.9" class="name" font-size="15.0" direction="rtl">مدخل</text>
+<text x="239.9" y="780.6" class="name" font-size="15.0">Entrance</text>
+<text x="239.9" y="796.4" class="area" font-size="12.0">9.0 m²</text>
+<text x="239.9" y="810.1" class="area" font-size="10.8">3.73 × 2.40</text>
+<text x="297.0" y="519.9" class="name" font-size="15.0" direction="rtl">صالون ضيوف</text>
+<text x="297.0" y="538.6" class="name" font-size="15.0">Guest Salon</text>
+<text x="297.0" y="554.4" class="area" font-size="12.0">30.2 m²</text>
+<text x="297.0" y="568.2" class="area" font-size="10.8">5.63 × 5.36</text>
+<text x="413.4" y="761.9" class="name" font-size="15.0" direction="rtl">حمام ضيوف</text>
+<text x="413.4" y="780.6" class="name" font-size="15.0">Guest WC</text>
+<text x="413.4" y="796.4" class="area" font-size="12.0">4.2 m²</text>
+<text x="413.4" y="810.1" class="area" font-size="10.8">1.75 × 2.40</text>
+<text x="606.4" y="581.0" class="name" font-size="15.0" direction="rtl">معيشة</text>
+<text x="606.4" y="599.7" class="name" font-size="15.0">Living</text>
+<text x="606.4" y="615.5" class="area" font-size="12.0">36.9 m²</text>
+<text x="606.4" y="629.3" class="area" font-size="10.8">4.38 × 8.43</text>
+<text x="606.4" y="204.5" class="name" font-size="15.0" direction="rtl">سفرة</text>
+<text x="606.4" y="223.2" class="name" font-size="15.0">Dining</text>
+<text x="606.4" y="239.0" class="area" font-size="12.0">16.7 m²</text>
+<text x="606.4" y="252.8" class="area" font-size="10.8">4.38 × 3.82</text>
+<text x="342.1" y="220.0" class="name" font-size="15.0" direction="rtl">مطبخ</text>
+<text x="342.1" y="238.8" class="name" font-size="15.0">Kitchen</text>
+<text x="342.1" y="254.5" class="area" font-size="12.0">17.9 m²</text>
+<text x="342.1" y="268.3" class="area" font-size="10.8">4.13 × 4.33</text>
+<text x="168.6" y="220.0" class="name" font-size="15.0" direction="rtl">غسيل</text>
+<text x="168.6" y="238.8" class="name" font-size="15.0">Laundry</text>
+<text x="168.6" y="254.5" class="area" font-size="12.0">5.9 m²</text>
+<text x="168.6" y="268.3" class="area" font-size="10.8">1.35 × 4.33</text>
+<text x="874.5" y="665.0" class="name" font-size="15.0" direction="rtl">نوم رئيسية</text>
+<text x="874.5" y="683.7" class="name" font-size="15.0">Master Bedroom</text>
+<text x="874.5" y="699.5" class="area" font-size="12.0">24.0 m²</text>
+<text x="874.5" y="713.3" class="area" font-size="10.8">4.26 × 5.63</text>
+<text x="1091.6" y="750.6" class="name" font-size="15.0" direction="rtl">حمام رئيسي</text>
+<text x="1091.6" y="769.4" class="name" font-size="15.0">Master Bath</text>
+<text x="1091.6" y="785.1" class="area" font-size="12.0">7.4 m²</text>
+<text x="1091.6" y="798.9" class="area" font-size="10.8">2.68 × 2.78</text>
+<text x="862.6" y="252.5" class="name" font-size="15.0" direction="rtl">غرفة نوم 1</text>
+<text x="862.6" y="271.2" class="name" font-size="15.0">Bedroom 1</text>
+<text x="862.6" y="287.0" class="area" font-size="12.0">20.9 m²</text>
+<text x="862.6" y="300.8" class="area" font-size="10.8">3.86 × 5.42</text>
+<text x="1079.7" y="252.5" class="name" font-size="15.0" direction="rtl">غرفة نوم 2</text>
+<text x="1079.7" y="271.2" class="name" font-size="15.0">Bedroom 2</text>
+<text x="1079.7" y="287.0" class="area" font-size="12.0">16.7 m²</text>
+<text x="1079.7" y="300.8" class="area" font-size="10.8">3.08 × 5.42</text>
+<text x="1091.6" y="577.1" class="name" font-size="15.0" direction="rtl">حمام</text>
+<text x="1091.6" y="595.8" class="name" font-size="15.0">Bathroom</text>
+<text x="1091.6" y="611.6" class="area" font-size="12.0">7.2 m²</text>
+<text x="1091.6" y="625.4" class="area" font-size="10.8">2.68 × 2.70</text>
+<text x="959.4" y="479.0" class="name" font-size="15.0" direction="rtl">ممر</text>
+<line x1="110.0" y1="903.0" x2="356.3" y2="903.0" class="dim"/>
+<line x1="106.0" y1="907.0" x2="114.0" y2="899.0" class="tick"/>
+<line x1="352.3" y1="907.0" x2="360.3" y2="899.0" class="tick"/>
+<text x="233.2" y="898.0" class="dimt">4.11</text>
+<line x1="356.3" y1="903.0" x2="470.5" y2="903.0" class="dim"/>
+<line x1="352.3" y1="907.0" x2="360.3" y2="899.0" class="tick"/>
+<line x1="466.5" y1="907.0" x2="474.5" y2="899.0" class="tick"/>
+<text x="413.4" y="898.0" class="dimt">1.90</text>
+<line x1="470.5" y1="903.0" x2="742.2" y2="903.0" class="dim"/>
+<line x1="466.5" y1="907.0" x2="474.5" y2="899.0" class="tick"/>
+<line x1="738.2" y1="907.0" x2="746.2" y2="899.0" class="tick"/>
+<text x="606.4" y="898.0" class="dimt">4.53</text>
+<line x1="742.2" y1="903.0" x2="1006.7" y2="903.0" class="dim"/>
+<line x1="738.2" y1="907.0" x2="746.2" y2="899.0" class="tick"/>
+<line x1="1002.7" y1="907.0" x2="1010.7" y2="899.0" class="tick"/>
+<text x="874.5" y="898.0" class="dimt">4.41</text>
+<line x1="1006.7" y1="903.0" x2="1190.0" y2="903.0" class="dim"/>
+<line x1="1002.7" y1="907.0" x2="1010.7" y2="899.0" class="tick"/>
+<line x1="1186.0" y1="907.0" x2="1194.0" y2="899.0" class="tick"/>
+<text x="1098.4" y="898.0" class="dimt">3.05</text>
+<line x1="110.0" y1="939.0" x2="1190.0" y2="939.0" class="dim"/>
+<line x1="106.0" y1="943.0" x2="114.0" y2="935.0" class="tick"/>
+<line x1="1186.0" y1="943.0" x2="1194.0" y2="935.0" class="tick"/>
+<text x="650.0" y="934.0" class="dimt">18.00</text>
+<line x1="77.0" y1="870.0" x2="77.0" y2="703.2" class="dim"/>
+<line x1="73.0" y1="874.0" x2="81.0" y2="866.0" class="tick"/>
+<line x1="73.0" y1="707.2" x2="81.0" y2="699.2" class="tick"/>
+<text x="71.0" y="786.6" class="dimt" transform="rotate(-90 71.0 786.6)">2.78</text>
+<line x1="77.0" y1="703.2" x2="77.0" y2="372.5" class="dim"/>
+<line x1="73.0" y1="707.2" x2="81.0" y2="699.2" class="tick"/>
+<line x1="73.0" y1="376.5" x2="81.0" y2="368.5" class="tick"/>
+<text x="71.0" y="537.9" class="dimt" transform="rotate(-90 71.0 537.9)">5.51</text>
+<line x1="77.0" y1="372.5" x2="77.0" y2="90.0" class="dim"/>
+<line x1="73.0" y1="376.5" x2="81.0" y2="368.5" class="tick"/>
+<line x1="73.0" y1="94.0" x2="81.0" y2="86.0" class="tick"/>
+<text x="71.0" y="231.3" class="dimt" transform="rotate(-90 71.0 231.3)">4.71</text>
+<line x1="41.0" y1="870.0" x2="41.0" y2="90.0" class="dim"/>
+<line x1="37.0" y1="874.0" x2="45.0" y2="866.0" class="tick"/>
+<line x1="37.0" y1="94.0" x2="45.0" y2="86.0" class="tick"/>
+<text x="35.0" y="480.0" class="dimt" transform="rotate(-90 35.0 480.0)">13.00</text>
+<text x="110" y="34" class="title">فيلا عائلة - Family Villa</text>
+<text x="110" y="56" class="meta">Gross area: 234.0 m²   ·   Net area: 204.5 m²   ·   Seed: 4</text>
+<text x="650" y="975" class="meta" text-anchor="middle">▲ FRONT / الواجهة الأمامية</text>
+</svg>

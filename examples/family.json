@@ -1,0 +1,9 @@
+{
+  "project": "فيلا عائلة - Family Villa",
+  "rules": "jordan",
+  "footprint": {"width": 18.0, "depth": 13.0},
+  "household": {"parents": true, "sons": 2, "daughters": 1, "others": 0, "guests": 10},
+  "settings": {"exterior_wall": 0.30, "interior_wall": 0.15, "corridor": 1.20, "wall_height": 3.0},
+  "lang": "both",
+  "dxf_lang": "en"
+}
