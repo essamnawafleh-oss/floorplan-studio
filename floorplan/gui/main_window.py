@@ -16,7 +16,9 @@ from PySide6.QtWidgets import (QApplication, QButtonGroup, QComboBox, QFileDialo
 
 from .. import design
 from ..export import to_dxf, to_glb, to_obj, to_svg
+from . import theme
 from .panels import InputPanel
+from .settings_dialog import SettingsDialog, load_prefs, save_prefs
 from .plan_view import PlanScene, PlanView, render_pixmap
 from .strings import tr
 
@@ -84,6 +86,9 @@ class MainWindow(QMainWindow):
         self.timer = QTimer(self, singleShot=True, interval=450)
         self.timer.timeout.connect(self.regenerate)
         self.resize(1500, 900)
+        self.prefs = load_prefs(self.settings)
+        self.tokens = theme.apply(QApplication.instance(), self.prefs)
+        self.plan_colors = theme.plan_colors(self.tokens, self.prefs["plan_theme"])
         self._build(initial=self._initial_config())
         self.regenerate()
 
@@ -119,6 +124,7 @@ class MainWindow(QMainWindow):
         self.scene = PlanScene()
         self.scene.roomClicked.connect(self._select_room)
         self.view = PlanView(self.scene)
+        self.view.set_canvas(self.tokens["canvas"])
 
         center = QWidget()
         cv = QVBoxLayout(center)
@@ -199,6 +205,9 @@ class MainWindow(QMainWindow):
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         tb.addWidget(spacer)
+        a = QAction(self.t("settings_btn"), self)
+        a.triggered.connect(self.open_settings)
+        tb.addAction(a)
         a = QAction(self.t("about"), self)
         a.triggered.connect(lambda: QMessageBox.information(self, self.t("about"), self.t("about_text")))
         tb.addAction(a)
@@ -210,7 +219,7 @@ class MainWindow(QMainWindow):
         w = QWidget()
         v = QVBoxLayout(w)
         hint = QLabel(self.t("variants_hint"))
-        hint.setStyleSheet("color:#666")
+        hint.setObjectName("muted")
         v.addWidget(hint)
         grid = QGridLayout()
         self.var_buttons = []
@@ -229,6 +238,7 @@ class MainWindow(QMainWindow):
         v.addWidget(more)
         v.addStretch(1)
         self.var_seeds = []
+        self._variant_plans = {}
         return w
 
     # ----------------------------------------------------------- generation
@@ -245,6 +255,7 @@ class MainWindow(QMainWindow):
         self.var_req += 1
         start = self.panel.seed.value() + 1 if start is None else start
         self.var_seeds = list(range(start, start + N_VARIANTS))
+        self._variant_plans = {}
         for b, s in zip(self.var_buttons, self.var_seeds):
             b.setIcon(QIcon())
             b.setText(f"Seed {s}  …")
@@ -269,8 +280,12 @@ class MainWindow(QMainWindow):
         if plan is None:
             b.setText(f"Seed {seed}  ✕")
             return
-        b.setIcon(QIcon(render_pixmap(plan, 300, 220, "en")))
+        self._variant_plans[seed] = plan
+        self._variant_icon(self.var_seeds.index(seed), plan)
         b.setText(f"Seed {seed}  ·  {plan.score:.0f}")
+
+    def _variant_icon(self, i, plan):
+        self.var_buttons[i].setIcon(QIcon(render_pixmap(plan, 300, 220, "en", self.plan_colors)))
 
     def _pick_variant(self, i):
         if i < len(self.var_seeds):
@@ -279,7 +294,7 @@ class MainWindow(QMainWindow):
 
     def _show_plan(self, plan):
         first = not self.scene.items()
-        self.scene.set_plan(plan, self.label_lang)
+        self.scene.set_plan(plan, self.label_lang, self.plan_colors)
         if first or getattr(self, "_last_size", None) != (plan.width, plan.depth):
             self.view.fit()
         self._last_size = (plan.width, plan.depth)
@@ -304,7 +319,7 @@ class MainWindow(QMainWindow):
             self.warn_list.addItem(self.t("no_warnings"))
         for w in plan.warnings:
             it = QListWidgetItem("⚠  " + (w["ar"] if self.lang == "ar" else w["en"]))
-            it.setForeground(QColor("#9a5b00"))
+            it.setForeground(QColor(self.tokens["warn"]))
             self.warn_list.addItem(it)
         self.tabs.setTabText(1, f"{self.t('tab_warnings')} ({len(plan.warnings)})")
 
@@ -325,7 +340,27 @@ class MainWindow(QMainWindow):
         self.label_lang = self.label_combo.currentData()
         self.settings.setValue("label_lang", self.label_lang)
         if self.plan:
-            self.scene.set_plan(self.plan, self.label_lang)
+            self.scene.set_plan(self.plan, self.label_lang, self.plan_colors)
+
+    def open_settings(self):
+        dlg = SettingsDialog(self.prefs, self.lang, self.apply_prefs, self)
+        if dlg.exec():
+            self.apply_prefs(dlg.prefs)
+            save_prefs(self.settings, self.prefs)
+
+    def apply_prefs(self, prefs: dict):
+        """Apply look & feel and rebuild the window so every widget picks it up."""
+        self.prefs = prefs
+        self.tokens = theme.apply(QApplication.instance(), prefs)
+        self.plan_colors = theme.plan_colors(self.tokens, prefs.get("plan_theme", "match"))
+        self.view.set_canvas(self.tokens["canvas"])
+        if self.plan:
+            self.scene.set_plan(self.plan, self.label_lang, self.plan_colors)
+            for i, s in enumerate(self.var_seeds):
+                if i < len(self.var_buttons) and self._variant_plans.get(s):
+                    self._variant_icon(i, self._variant_plans[s])
+        if self.plan is not None:
+            self._show_plan(self.plan)
 
     def toggle_language(self):
         cfg, seed = self.panel.get_config(), self.panel.seed.value()

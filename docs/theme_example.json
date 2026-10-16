@@ -1,0 +1,17 @@
+{
+  "_comment": "Custom theme for Floor Plan Studio. Settings > Theme > Load theme. Colours are hex codes.",
+  "window": "#101418",
+  "card": "#1a2027",
+  "border": "#2b333d",
+  "input": "#222a33",
+  "input_border": "#36414d",
+  "text": "#e9eef3",
+  "muted": "#9aa6b2",
+  "hover": "#26303a",
+  "selection": "#1f4e5f",
+  "canvas": "#0c1014",
+  "accent": "#e0a526",
+  "accent_text": "#101418",
+  "warn": "#f5b94a",
+  "plan": "dark"
+}

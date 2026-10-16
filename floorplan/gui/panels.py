@@ -125,7 +125,7 @@ class InputPanel(QWidget):
             bl.addWidget(b)
         cv.addLayout(bl)
         hint = QLabel(t("area_auto_hint"))
-        hint.setStyleSheet("color:#777;font-size:11px")
+        hint.setObjectName("muted")
         cv.addWidget(hint)
         self.rooms_stack.addWidget(cp)
         v.addWidget(self.rooms_stack)
