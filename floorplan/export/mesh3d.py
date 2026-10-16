@@ -4,6 +4,7 @@ Exports GLB (Blender, Windows 3D Viewer, web) and OBJ."""
 from __future__ import annotations
 
 import trimesh
+from trimesh.exchange.obj import export_obj
 from shapely.geometry import box
 
 from ..geometry import rect_poly, walls
@@ -68,5 +69,7 @@ def to_glb(plan: Plan, path: str) -> None:
 
 
 def to_obj(plan: Plan, path: str) -> None:
+    """Plain geometry (no material files) - colours live in the GLB."""
     mesh = trimesh.util.concatenate(list(build_scene(plan).dump()))
-    mesh.export(path)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(export_obj(mesh, include_texture=False, include_color=False))

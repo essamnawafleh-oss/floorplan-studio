@@ -1,0 +1,56 @@
+name: Build Windows app
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -r requirements-gui.txt
+
+      - name: Tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest -q
+
+      - name: Build exe
+        run: pyinstaller FloorPlanStudio.spec --noconfirm
+
+      - name: Smoke test the exe
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          $p = Start-Process -FilePath dist\FloorPlanStudio.exe -ArgumentList "--selftest", "selftest_out" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "selftest exit code $($p.ExitCode)" }
+          if (-not (Test-Path selftest_out\selftest_ok.txt)) { throw "selftest did not finish" }
+          Get-ChildItem selftest_out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FloorPlanStudio-windows
+          path: dist/FloorPlanStudio.exe
+
+      - name: Publish to Releases (latest)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest dist/FloorPlanStudio.exe \
+            --title "Floor Plan Studio - latest build" \
+            --notes "Windows build of commit ${GITHUB_SHA::7}. Download FloorPlanStudio.exe and double-click it. / نزّل الملف وافتحه بدبل كليك." \
+            --target "$GITHUB_SHA"

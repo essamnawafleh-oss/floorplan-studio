@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 out/
 .pytest_cache/
+build/
+dist/
+selftest_out/

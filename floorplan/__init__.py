@@ -7,6 +7,9 @@ __version__ = "0.1.0"
 __all__ = ["generate", "build_program", "resolve_footprint", "design"]
 
 
+_CALIBRATED: dict[str, tuple[float, float]] = {}   # same inputs -> same footprint, computed once
+
+
 def design(config: dict, seed: int = 0, candidates: int = 400):
     """Config dict -> Plan (the one call most callers need)."""
     from .rules import get_rules
@@ -15,7 +18,12 @@ def design(config: dict, seed: int = 0, candidates: int = 400):
     specs = build_program(config)
     w, d, notes, free = resolve_footprint(config, specs, settings)
     if free:
-        w, d = calibrate(specs, w, d, free, settings, rules_name)
+        import json
+        key = json.dumps([config.get(k) for k in ("footprint", "plot", "rooms", "household", "settings", "rules")],
+                         sort_keys=True, default=str)
+        if key not in _CALIBRATED:
+            _CALIBRATED[key] = calibrate(specs, w, d, free, settings, rules_name)
+        w, d = _CALIBRATED[key]
     plan = generate(specs, w, d, seed=seed, settings=settings, rules_name=rules_name,
                     candidates=candidates, project=config.get("project", ""))
     plan.warnings = [dict(ar=n, en=n) for n in notes] + plan.warnings
