@@ -97,6 +97,7 @@ class Opening:
     hinge: int = 0            # hinge at s0 (0) or s1 (1)
     sill: float = 0.0
     head: float = 2.1
+    block: str = ""           # optional library block drawn instead of the default symbol
 
     @property
     def width(self) -> float:
@@ -111,6 +112,17 @@ class Opening:
 
 
 @dataclass
+class Furniture:
+    """A library block placed on the plan. (x, y) is the block's base point."""
+    block: str
+    x: float
+    y: float
+    rotation: float = 0.0     # degrees, counter-clockwise
+    scale: float = 1.0
+    id: str = ""
+
+
+@dataclass
 class Plan:
     width: float
     depth: float
@@ -121,6 +133,8 @@ class Plan:
     score: float = 0.0
     warnings: list[str] = field(default_factory=list)
     project: str = ""
+    furniture: list[Furniture] = field(default_factory=list)
+    edited: bool = False      # changed by hand in edit mode
 
     def room(self, room_id: str) -> Room:
         return next(r for r in self.rooms if r.id == room_id)
@@ -144,5 +158,27 @@ class Plan:
                         rect=asdict(r.rect), net=asdict(r.net)) for r in self.rooms],
             openings=[dict(kind=o.kind, rooms=list(o.rooms), width=round(o.width, 2),
                            seg=asdict(o.seg), thickness=o.thickness, into=o.into, hinge=o.hinge,
-                           sill=o.sill, head=o.head) for o in self.openings],
+                           sill=o.sill, head=o.head, block=o.block) for o in self.openings],
+            furniture=[asdict(f) for f in self.furniture],
+            edited=self.edited,
         )
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Plan":
+        rooms = []
+        for r in d["rooms"]:
+            spec = RoomSpec(r["id"], r["type"], r.get("target_area", r["net_area"]), r.get("occupants", 0),
+                            name_ar=r.get("name_ar", ""), name_en=r.get("name_en", ""))
+            rooms.append(Room(spec, Rect(**r["rect"]), Rect(**r["net"])))
+        openings = [Opening(o["kind"], Segment(**o["seg"]), o["thickness"], tuple(o["rooms"]),
+                            o.get("into", 1), o.get("hinge", 0), o.get("sill", 0.0), o.get("head", 2.1),
+                            o.get("block", "")) for o in d.get("openings", [])]
+        plan = cls(d["width"], d["depth"], rooms, openings, dict(d.get("settings", {})),
+                   seed=d.get("seed", 0), score=d.get("score", 0.0), warnings=list(d.get("warnings", [])),
+                   project=d.get("project", ""),
+                   furniture=[Furniture(**f) for f in d.get("furniture", [])],
+                   edited=d.get("edited", False))
+        return plan
+
+    def copy(self) -> "Plan":
+        return Plan.from_dict(self.to_dict())

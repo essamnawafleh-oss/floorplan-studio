@@ -106,11 +106,20 @@ QHeaderView::section {{ background: {t['window']}; color: {t['muted']}; border: 
                        border-bottom: 1px solid {t['border']}; padding: 5px; }}
 QLineEdit {{ background: {t['input']}; color: {t['text']}; border: 1px solid {t['input_border']};
             border-radius: 5px; padding: 3px 6px; min-height: 22px; }}
+QLineEdit:disabled {{ background: {t['window']}; color: {t['muted']}; }}
 QSpinBox, QDoubleSpinBox, QComboBox, QFontComboBox {{ min-height: 24px; }}
 QComboBox QAbstractItemView {{ background: {t['card']}; color: {t['text']}; selection-background-color: {t['selection']}; }}
 QMenu {{ background: {t['card']}; border: 1px solid {t['border']}; }}
 QMenu::item:selected {{ background: {t['selection']}; }}
 QSplitter::handle {{ background: {t['border']}; }}
+QCheckBox::indicator, QListView::indicator, QGroupBox::indicator {{ width: 15px; height: 15px; border-radius: 3px;
+            border: 1.5px solid {t['muted']}; background: {t['input']}; }}
+QCheckBox::indicator:checked, QListView::indicator:checked, QGroupBox::indicator:checked {{
+            background: {t['accent']}; border-color: {t['accent']}; }}
+QRadioButton::indicator {{ width: 14px; height: 14px; border-radius: 8px; border: 1.5px solid {t['muted']};
+            background: {t['input']}; }}
+QRadioButton::indicator:checked {{ background: {t['accent']}; border: 3px solid {t['input']};
+            outline: none; }}
 QScrollBar {{ background: {t['window']}; }}
 """
 
@@ -134,6 +143,9 @@ def palette(t: dict) -> QPalette:
         p.setColor(group, QPalette.Link, c("accent"))
     for role in (QPalette.WindowText, QPalette.Text, QPalette.ButtonText):
         p.setColor(QPalette.Disabled, role, c("muted"))
+    for role, key in ((QPalette.Base, "window"), (QPalette.Window, "window"), (QPalette.Button, "card"),
+                      (QPalette.AlternateBase, "window"), (QPalette.Highlight, "border")):
+        p.setColor(QPalette.Disabled, role, c(key))
     return p
 
 

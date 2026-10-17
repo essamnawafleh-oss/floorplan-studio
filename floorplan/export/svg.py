@@ -58,7 +58,14 @@ def _chain(plan: Plan, side: str) -> list[float]:
     return sorted({0.0, plan.depth} | {c for c in cuts if te + 0.05 < c < plan.depth - te - 0.05})
 
 
-def to_svg(plan: Plan, lang: str = "both", scale: float = 60.0) -> str:
+def to_svg(plan: Plan, lang: str = "both", scale: float = 60.0, library=None) -> str:
+    from ..blocks import BUILTIN, furniture_polylines, opening_polylines
+    blocks = library.blocks if library else BUILTIN
+
+    def polys(lines, cls):
+        for pl in lines:
+            out.append('<polyline points="' + " ".join("%.1f,%.1f" % t(x, y) for x, y in pl) + f'" class="{cls}"/>')
+
     s, m, top = scale, 110.0, 90.0
     t = _T(plan, s, m, top)
     W, H = plan.width * s + 2 * m, plan.depth * s + top + 140
@@ -70,6 +77,8 @@ def to_svg(plan: Plan, lang: str = "both", scale: float = 60.0) -> str:
   .swing{{fill:none;stroke:{INK};stroke-width:0.8;stroke-dasharray:4 3}}
   .win{{fill:#ffffff;stroke:{INK};stroke-width:1}}
   .glass{{stroke:#4a7fb5;stroke-width:1.2}}
+  .glassb{{fill:none;stroke:#4a7fb5;stroke-width:1.1}}
+  .furn{{fill:none;stroke:#5a5f66;stroke-width:1}}
   .name{{font-family:{FONT};font-weight:700;fill:#22252a;text-anchor:middle}}
   .area{{font-family:{FONT};fill:#555a62;text-anchor:middle}}
   .dim{{stroke:#7a7f87;stroke-width:0.8}}
@@ -91,15 +100,20 @@ def to_svg(plan: Plan, lang: str = "both", scale: float = 60.0) -> str:
 
     for o in plan.openings:
         g = o.gap_rect()
+        block = blocks.get(o.block) if o.block else None
         if o.kind == "window":
             (x0, y1), (x1, y0) = t(g.x0, g.y0), t(g.x1, g.y1)
             out.append(f'<rect x="{x0:.1f}" y="{y0:.1f}" width="{x1 - x0:.1f}" height="{y1 - y0:.1f}" class="win"/>')
-            if o.seg.orient == "h":
+            if block:
+                polys(opening_polylines(block, o), "glassb")
+            elif o.seg.orient == "h":
                 yc = (y0 + y1) / 2
                 out.append(f'<line x1="{x0:.1f}" y1="{yc:.1f}" x2="{x1:.1f}" y2="{yc:.1f}" class="glass"/>')
             else:
                 xc = (x0 + x1) / 2
                 out.append(f'<line x1="{xc:.1f}" y1="{y0:.1f}" x2="{xc:.1f}" y2="{y1:.1f}" class="glass"/>')
+        elif block:
+            polys(opening_polylines(block, o), "door")
         else:
             hinge, leaf, closed, w = door_geometry(o)
             hx, hy = t(*hinge)
@@ -113,6 +127,11 @@ def to_svg(plan: Plan, lang: str = "both", scale: float = 60.0) -> str:
                 pts.append(t(hinge[0] + w * math.cos(a), hinge[1] + w * math.sin(a)))
             out.append(f'<line x1="{hx:.1f}" y1="{hy:.1f}" x2="{lx:.1f}" y2="{ly:.1f}" class="door"/>')
             out.append('<polyline points="' + " ".join(f"{x:.1f},{y:.1f}" for x, y in pts) + '" class="swing"/>')
+
+    for f in plan.furniture:
+        b = blocks.get(f.block)
+        if b:
+            polys(furniture_polylines(b, f.x, f.y, f.rotation, f.scale), "furn")
 
     for r in plan.rooms:
         cx, cy = t(*r.net.center)

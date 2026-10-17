@@ -31,7 +31,7 @@ def test_window_generates_plan_and_switches_language(app, tmp_path):
     win.regenerate()
     assert wait_for(app, lambda: win.plan is not first)
     for ext in ("svg", "png", "pdf", "dxf", "glb", "obj", "json"):
-        win._write(ext, str(tmp_path / f"p.{ext}"))
+        win.write_file(ext, str(tmp_path / f"p.{ext}"))
         assert (tmp_path / f"p.{ext}").stat().st_size > 100, ext
     win.toggle_language()
     win.toggle_language()

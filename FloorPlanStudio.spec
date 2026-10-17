@@ -6,6 +6,10 @@ datas = [("examples", "examples"), ("assets", "assets")]
 datas += collect_data_files("trimesh")
 datas += collect_data_files("ezdxf")
 hidden = collect_submodules("ezdxf.fonts") + ["shapely", "mapbox_earcut"]
+# standard modules that user add-ons commonly import (the exe only bundles what it uses itself)
+hidden += ["csv", "statistics", "datetime", "decimal", "fractions", "itertools", "collections", "functools",
+           "pathlib", "random", "string", "textwrap", "uuid", "zipfile", "sqlite3", "xml.etree.ElementTree",
+           "urllib.request", "html", "pprint", "copy", "dataclasses", "enum", "typing"]
 
 a = Analysis(
     ["FloorPlanStudio.py"],

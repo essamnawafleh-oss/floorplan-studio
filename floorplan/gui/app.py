@@ -33,6 +33,12 @@ def selftest(out_dir: str) -> int:
     app = QApplication.instance() or QApplication(sys.argv[:1])
     win = MainWindow(os.path.join(resource_dir(), "examples"))
     render_pixmap(plan, 800, 600).save(os.path.join(out_dir, "test.png"))
+    from floorplan.gui.quantities_dialog import QuantitiesDialog
+    from floorplan.gui.viewer3d import Viewer3D
+    v = Viewer3D(plan, win.library)
+    v.resize(400, 300)
+    v.grab().save(os.path.join(out_dir, "test3d.png"))
+    QuantitiesDialog(plan, "en", win.settings).recalc()
     win.close()
     with open(os.path.join(out_dir, "selftest_ok.txt"), "w") as f:
         f.write("ok\n")
