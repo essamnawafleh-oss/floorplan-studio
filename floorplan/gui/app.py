@@ -39,6 +39,12 @@ def selftest(out_dir: str) -> int:
     v.resize(400, 300)
     v.grab().save(os.path.join(out_dir, "test3d.png"))
     QuantitiesDialog(plan, "en", win.settings).recalc()
+    from floorplan.parametric import ParametricStudy, run_study
+    cands = run_study(ParametricStudy(base_config=cfg, seeds=[1], candidates=30, keep=2, refine_passes=1))
+    win.enter_parametric()
+    win.param_candidates[:] = cands
+    win.param_panel._show_candidates()
+    win.leave_parametric()
     win.close()
     with open(os.path.join(out_dir, "selftest_ok.txt"), "w") as f:
         f.write("ok\n")

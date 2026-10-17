@@ -12,12 +12,14 @@ from PySide6.QtGui import QAction, QActionGroup, QColor, QIcon, QPageLayout, QPa
 from PySide6.QtWidgets import (QApplication, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
                                QGridLayout, QHBoxLayout, QHeaderView, QLabel, QListWidget, QListWidgetItem,
                                QMainWindow, QMenu, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QSplitter,
+                               QStackedWidget,
                                QTableWidget, QTableWidgetItem, QTabWidget, QToolButton, QVBoxLayout, QWidget)
 
 from .. import design, editing
 from ..blocks import BlockLibrary
 from ..export import to_dxf, to_glb, to_obj, to_svg
 from ..models import Plan
+from ..parametric import PROJECT_KEYS_NOT_IN_STUDY, ParametricStudy, programme
 from ..paths import user_dir
 from . import theme
 from .addons import AddonManager, AddonsDialog
@@ -90,6 +92,10 @@ class MainWindow(QMainWindow):
         self.examples_dir = examples_dir
         self.req = 0
         self.var_req = 0
+        self.workspace = "design"            # "design" | "parametric"
+        self.study: ParametricStudy | None = None
+        self.param_candidates: list = []     # in-memory results; never part of the project plan
+        self.param_panel = None
         self.project_path = None
         self.pool = QThreadPool.globalInstance()
         self.sig = _Signals()
@@ -220,9 +226,14 @@ class MainWindow(QMainWindow):
         split.addWidget(self.tabs)
         split.setStretchFactor(1, 1)
         split.setSizes([380, 780, 400])
-        self.setCentralWidget(split)
+        self.stack = QStackedWidget()
+        self.stack.addWidget(split)
+        self.setCentralWidget(self.stack)
         self.addons.attach_menu(self.tools_menu)
         self.set_edit_mode(self.editor.enabled)
+        if self.workspace == "parametric":
+            self.param_panel = None
+            self._show_parametric_page()
         if self.plan is not None:
             self.redraw(fit=True)
 
@@ -258,6 +269,7 @@ class MainWindow(QMainWindow):
         tb.addWidget(btn)
         tb.addSeparator()
         self.edit_action = self._action(tb, self.t("edit_mode"), self.set_edit_mode, checkable=True)
+        self.param_action = self._action(tb, self.t("pm_mode"), self.toggle_parametric, checkable=True)
         tb.addSeparator()
 
         self.tool_group = QActionGroup(self)
@@ -362,6 +374,8 @@ class MainWindow(QMainWindow):
 
     # ------------------------------------------------------------- modes / tools
     def set_edit_mode(self, on: bool):
+        if on and self.workspace == "parametric":
+            self.leave_parametric()
         on = bool(on) and self.plan is not None
         self.editor.enabled = on
         self.edit_action.setChecked(on)
@@ -425,6 +439,8 @@ class MainWindow(QMainWindow):
 
     def regenerate(self):
         self.timer.stop()
+        if self.workspace == "parametric":       # the parametric workspace never replaces the project plan
+            return
         if self.editor.enabled or not self._confirm_discard():
             return
         self.req += 1
@@ -605,7 +621,78 @@ class MainWindow(QMainWindow):
         self._build(cfg, seed)
         self.run_variants()
 
+    # ------------------------------------------------------------ parametric workspace
+    def _study_base(self) -> dict:
+        cfg = self.panel.get_config()
+        for k in PROJECT_KEYS_NOT_IN_STUDY:
+            cfg.pop(k, None)
+        return cfg
+
+    def toggle_parametric(self, on: bool):
+        self.enter_parametric() if on else self.leave_parametric()
+
+    def enter_parametric(self):
+        """Switch to the parametric workspace. The project plan is not touched."""
+        self.timer.stop()
+        if self.editor.enabled:
+            self.set_edit_mode(False)
+        base = self._study_base()
+        if self.study is None:
+            self.study = ParametricStudy(base_config=base)
+        elif self.study.base_config != base:     # inputs changed since: keep overrides that still apply
+            ids = {r["id"] for r in programme(ParametricStudy(base_config=base))}
+            d = self.study.to_dict()
+            d["base_config"] = base
+            d["room_overrides"] = {k: v for k, v in d["room_overrides"].items() if k in ids}
+            self.study = ParametricStudy.from_dict(d)
+            self.param_candidates.clear()
+        self._show_parametric_page()
+
+    def _show_parametric_page(self):
+        from .parametric_panel import ParametricPanel
+        if self.param_panel is not None:
+            self.param_panel.shutdown()
+            self.stack.removeWidget(self.param_panel)
+            self.param_panel.deleteLater()
+        self.param_panel = ParametricPanel(self, self.study, self.param_candidates)
+        self.param_panel.applyRequested.connect(self.apply_candidate)
+        self.param_panel.backRequested.connect(self.leave_parametric)
+        self.stack.addWidget(self.param_panel)
+        self.stack.setCurrentWidget(self.param_panel)
+        self.workspace = "parametric"
+        self.param_action.setChecked(True)
+        self.status.setText(self.t("pm_on"))
+
+    def leave_parametric(self):
+        """Back to the design workspace; the project plan is exactly as it was."""
+        if self.param_panel is not None:
+            self.study = self.param_panel.read_study()
+            self.param_panel.shutdown()
+        self.stack.setCurrentIndex(0)
+        self.workspace = "design"
+        self.param_action.setChecked(False)
+
+    def apply_candidate(self, cand):
+        """Replace the project plan with a parametric result as ONE undoable step."""
+        if self.plan is not None and self.plan.edited:
+            ans = QMessageBox.question(self, self.t("app"), self.t("pm_confirm_replace"))
+            if ans != QMessageBox.Yes:
+                return
+        new = cand.plan.copy()
+        new.warnings = list(cand.plan.warnings)
+        new.score = cand.plan.score
+        new.edited = True                         # differs from the input panel: save it with the project
+        if self.plan is not None:
+            self.editor.push_undo(self.plan.to_dict())
+        self.editor.set_plan(new, keep_history=True)
+        self.leave_parametric()
+        self.set_edit_mode(True)
+        self.redraw(fit=True)
+        self.status.setText(self.t("pm_applied").format(rank=cand.rank, seed=cand.seed))
+
     def closeEvent(self, e):
+        if self.param_panel is not None:
+            self.param_panel.shutdown()
         self.sig.cancelled = True
         self.pool.clear()
         self.pool.waitForDone(5000)
@@ -621,6 +708,10 @@ class MainWindow(QMainWindow):
     def new_project(self):
         if not self._confirm_discard():
             return
+        if self.workspace == "parametric":
+            self.leave_parametric()
+        self.study = None
+        self.param_candidates.clear()
         self.set_edit_mode(False)
         if self.plan:
             self.plan.edited = False
@@ -646,6 +737,12 @@ class MainWindow(QMainWindow):
 
     def open_config(self, cfg: dict):
         self.set_edit_mode(False)
+        if self.workspace == "parametric":
+            self.leave_parametric()
+        self.param_candidates.clear()
+        base = {k: v for k, v in cfg.items() if k not in PROJECT_KEYS_NOT_IN_STUDY}
+        self.study = ParametricStudy.from_dict({**cfg["parametric"], "base_config": base}) \
+            if isinstance(cfg.get("parametric"), dict) else None
         if self.plan:
             self.plan.edited = False          # opening a project replaces the current one
         self.panel.set_config(cfg)
@@ -660,6 +757,12 @@ class MainWindow(QMainWindow):
     def project_dict(self) -> dict:
         cfg = self.panel.get_config()
         cfg["seed"] = self.panel.seed.value()
+        if self.param_panel is not None and self.workspace == "parametric":
+            self.study = self.param_panel.read_study()
+        if self.study is not None:
+            study = self.study.to_dict()
+            study.pop("base_config")              # the project's own inputs are the base
+            cfg["parametric"] = study
         if self.plan is not None and self.plan.edited:
             cfg["plan"] = self.plan.to_dict()        # manual edits are saved with the project
         return cfg
