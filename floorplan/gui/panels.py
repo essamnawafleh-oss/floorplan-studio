@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QCheckBox, QComboBox, QDoubleSpinBox,
-                               QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+                               QFormLayout, QGridLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
                                QPushButton, QRadioButton, QSpinBox, QStackedWidget, QTableWidget,
                                QVBoxLayout, QWidget)
 
@@ -104,6 +104,17 @@ class InputPanel(QWidget):
         for k, w in [("parents", self.parents), ("sons", self.sons), ("daughters", self.daughters),
                      ("others", self.others), ("guests", self.guests), ("office", self.office), ("maid", self.maid)]:
             hf.addRow(t(k), w)
+        # optional rooms: untick to drop them from the programme
+        opt = QGroupBox(t("include_rooms"))
+        og = QGridLayout(opt)
+        self.include = {}
+        for i, rtype in enumerate(get_rules("jordan").OPTIONAL_ROOMS):
+            cb = QCheckBox(room_name(rtype, lang))
+            cb.setChecked(True)
+            cb.toggled.connect(self._emit)
+            og.addWidget(cb, i // 2, i % 2)
+            self.include[rtype] = cb
+        hf.addRow(opt)
         self.rooms_stack.addWidget(hp)
         # custom page
         cp = QWidget()
@@ -174,6 +185,10 @@ class InputPanel(QWidget):
             self.quality.addItem(t(k), n)
         self.quality.setCurrentIndex(1)
         f.addRow(t("quality"), self.quality)
+        self.strict = QCheckBox(t("strict"))
+        self.strict.setToolTip(t("strict_tip"))
+        self.strict.toggled.connect(self._emit)
+        f.addRow(self.strict)
         self.btn_generate = QPushButton(t("generate"))
         self.btn_generate.setObjectName("primary")
         self.btn_generate.clicked.connect(self.generateRequested.emit)
@@ -268,10 +283,12 @@ class InputPanel(QWidget):
     def household(self) -> dict:
         return dict(parents=self.parents.isChecked(), sons=self.sons.value(), daughters=self.daughters.value(),
                     others=self.others.value(), guests=self.guests.value(),
-                    office=self.office.isChecked(), maid=self.maid.isChecked())
+                    office=self.office.isChecked(), maid=self.maid.isChecked(),
+                    exclude=[k for k, cb in self.include.items() if not cb.isChecked()])
 
     def get_config(self) -> dict:
-        cfg = {"project": self.name.text().strip(), "rules": "jordan", "household": self.household()}
+        cfg = {"project": self.name.text().strip(), "rules": "jordan", "household": self.household(),
+               "strict": self.strict.isChecked()}
         mode = self.fp_mode.currentData()
         if mode == "fp_fixed":
             cfg["footprint"] = {"width": self.width.value(), "depth": self.depth.value()}
@@ -332,6 +349,9 @@ class InputPanel(QWidget):
             self.guests.setValue(hh.get("guests", 0))
             self.office.setChecked(hh.get("office", False))
             self.maid.setChecked(hh.get("maid", False))
+            for k, cb in self.include.items():
+                cb.setChecked(k not in hh.get("exclude", []))
+            self.strict.setChecked(bool(cfg.get("strict", False)))
             self.table.setRowCount(0)
             for r in cfg.get("rooms", []):
                 self.add_room_row(r["type"], r.get("area", 0.0), r.get("occupants", 0),

@@ -64,6 +64,9 @@ ADJACENCY_WISHES: list[tuple[str, str, float]] = [
     ("master", "ensuite", 10.0),
 ]
 
+# Rooms the user may drop from a household programme
+OPTIONAL_ROOMS = ["entrance", "salon", "guest_wc", "dining", "laundry", "ensuite"]
+
 # Building defaults (m)
 DEFAULT_SETTINGS = dict(
     exterior_wall=0.30,   # stone + concrete + insulation + block

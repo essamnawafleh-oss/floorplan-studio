@@ -19,21 +19,31 @@ MIN_ROW = 2.8          # minimum depth of a bedroom row (m)
 
 def generate(specs: list[RoomSpec], width: float, depth: float, seed: int = 0,
              settings: dict | None = None, rules_name: str = "jordan",
-             candidates: int = 400, project: str = "") -> Plan:
+             candidates: int = 400, project: str = "", strict: bool = False) -> Plan:
+    """strict=True: only layouts that meet every hard rule (minimum width and
+    area, proportions, window for habitable rooms, access) are accepted; the
+    search is longer. If none exists the closest one is returned with a note."""
     rules = get_rules(rules_name)
     st = {**rules.DEFAULT_SETTINGS, **(settings or {})}
     rng = random.Random(seed)
     best: Plan | None = None
-    for _ in range(candidates):
+    key = (lambda p: (p._hard, p.score)) if strict else (lambda p: p.score)
+    for i in range(candidates * (8 if strict else 1)):
+        if strict and i >= candidates and best is not None and best._hard == 0:
+            break                      # found a fully valid layout after the normal search
         rects = _candidate(specs, width, depth, st, rng)
         if rects is None:
             continue
         plan = _build(specs, rects, width, depth, st, rules)
         plan.score, plan.warnings = evaluate(plan, rules)
-        if best is None or plan.score < best.score:
+        if best is None or key(plan) < key(best):
             best = plan
     if best is None:
         raise ValueError("Could not lay out this programme in the given footprint")
+    if strict and best._hard:
+        best.warnings.insert(0, dict(
+            ar="الوضع الصارم: ما في توزيع بيحقق كل الشروط بهاي الأبعاد. كبّر المبنى أو احذف غرفة، أو جرّب Seed ثاني.",
+            en="Strict mode: no layout meets every rule in this footprint. Enlarge it, remove a room or try another seed."))
     best.seed, best.project = seed, project
     return best
 
@@ -266,7 +276,7 @@ def evaluate(plan: Plan, rules) -> tuple[float, list[dict]]:
     """Lower is better. Also returns human readable warnings (ar/en)."""
     st, stats = plan.settings, plan._stats
     te = st["exterior_wall"]
-    score, warn = 0.0, []
+    score, warn, hard = 0.0, [], 0
     windows = {o.rooms[0] for o in plan.openings if o.kind == "window"}
     types = {r.spec.type for r in plan.rooms}
 
@@ -284,17 +294,21 @@ def evaluate(plan: Plan, rules) -> tuple[float, list[dict]]:
         if n.aspect > info["max_aspect"]:
             score += (n.aspect - info["max_aspect"]) * 4
             if n.aspect > info["max_aspect"] + 0.3:
+                hard += 1
                 warn.append(dict(ar=f"{ar_name}: الغرفة طويلة وضيقة ({n.w:.2f}×{n.h:.2f})",
                                  en=f"{en_name}: long and narrow ({n.w:.2f}x{n.h:.2f})"))
         if n.short < info["min_width"]:
+            hard += 1
             score += (info["min_width"] - n.short) * 15
             warn.append(dict(ar=f"{ar_name}: العرض {n.short:.2f} م أقل من الحد الأدنى {info['min_width']} م",
                              en=f"{en_name}: width {n.short:.2f} m below minimum {info['min_width']} m"))
         if n.area < info["min_area"]:
+            hard += 1
             score += (info["min_area"] - n.area) / info["min_area"] * 15
             warn.append(dict(ar=f"{ar_name}: المساحة {n.area:.1f} م² أقل من الحد الأدنى {info['min_area']} م²",
                              en=f"{en_name}: {n.area:.1f} m² below minimum {info['min_area']} m²"))
         if info["habitable"] and r.id not in windows:
+            hard += 1
             score += 15
             warn.append(dict(ar=f"{ar_name}: ما في شباك على واجهة خارجية",
                              en=f"{en_name}: no window on an exterior wall"))
@@ -306,8 +320,10 @@ def evaluate(plan: Plan, rules) -> tuple[float, list[dict]]:
     for rid in stats["unreached"]:
         r = plan.room(rid)
         score += 100
+        hard += 1
         warn.append(dict(ar=f"{r.spec.name_ar}: ما في طريق للوصول إليها", en=f"{r.spec.name_en}: not reachable"))
     score += stats["detours"] * 7 + stats["through_private"] * 25
+    hard += stats["through_private"]
     if stats["through_private"]:
         warn.append(dict(ar="في غرفة الدخول إلها من خلال غرفة نوم", en="A room is reached through a bedroom"))
 
@@ -326,4 +342,5 @@ def evaluate(plan: Plan, rules) -> tuple[float, list[dict]]:
         warn.append(dict(ar="الباب الرئيسي مش على الواجهة الأمامية", en="Main door is not on the front"))
     if "salon" in first and "front" not in exterior_segments(plan.room(first["salon"]).rect, plan.width, plan.depth, te):
         score += 3
+    plan._hard = hard
     return score, warn

@@ -92,3 +92,18 @@ def test_plot_and_zoning_envelope():
     plan = design(cfg, seed=1, candidates=60)
     assert plan.width <= 25 - 2 * 3.0 + 1e-6
     assert plan.width * plan.depth <= 0.51 * 25 * 32 + 1e-6
+
+
+def test_exclude_optional_rooms():
+    cfg = load("family.json")
+    cfg["household"]["exclude"] = ["laundry", "guest_wc", "master"]
+    types = {s.type for s in build_program(cfg)}
+    assert not types & {"laundry", "guest_wc", "master", "ensuite"}
+    assert "kitchen" in types
+
+
+def test_strict_mode_meets_hard_rules():
+    cfg = load("fixed_rooms.json")
+    cfg["strict"] = True
+    plan = design(cfg, seed=1)
+    assert plan._hard == 0

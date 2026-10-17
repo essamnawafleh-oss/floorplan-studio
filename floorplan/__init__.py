@@ -25,7 +25,8 @@ def design(config: dict, seed: int = 0, candidates: int = 400):
             _CALIBRATED[key] = calibrate(specs, w, d, free, settings, rules_name)
         w, d = _CALIBRATED[key]
     plan = generate(specs, w, d, seed=seed, settings=settings, rules_name=rules_name,
-                    candidates=candidates, project=config.get("project", ""))
+                    candidates=candidates, project=config.get("project", ""),
+                    strict=bool(config.get("strict", False)))
     plan.warnings = [dict(ar=n, en=n) for n in notes] + plan.warnings
     return plan
 

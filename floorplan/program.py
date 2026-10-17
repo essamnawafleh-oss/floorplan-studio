@@ -22,6 +22,11 @@ def build_program(config: dict) -> list[RoomSpec]:
     raw = config.get("rooms") or rules.household_program(
         parents, sons, daughters, others, guests,
         office=bool(hh.get("office", False)), maid=bool(hh.get("maid", False)))
+    exclude = set(hh.get("exclude", []))
+    if "master" in exclude:
+        exclude.add("ensuite")
+    if exclude and not config.get("rooms"):
+        raw = [r for r in raw if r["type"] not in exclude]
 
     totals = Counter(r["type"] for r in raw)
     counters: Counter = Counter()
