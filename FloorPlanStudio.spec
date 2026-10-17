@@ -21,10 +21,14 @@ a = Analysis(
     noarchive=False,
 )
 pyz = PYZ(a.pure)
+# One-folder build (no self-extracting single file): far fewer antivirus false positives.
 exe = EXE(
-    pyz, a.scripts, a.binaries, a.datas, [],
+    pyz, a.scripts, [],
+    exclude_binaries=True,
     name="FloorPlanStudio",
     console=False,
     icon="assets/icon.ico",
+    version="assets/version_info.txt",
     upx=False,
 )
+coll = COLLECT(exe, a.binaries, a.datas, name="FloorPlanStudio", upx=False)

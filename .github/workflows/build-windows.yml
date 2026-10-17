@@ -20,29 +20,47 @@ jobs:
           cache: pip
 
       - name: Install
-        run: pip install -r requirements-gui.txt
+        run: |
+          pip install -r requirements.txt PySide6
+          # PyInstaller with a bootloader compiled here (not the prebuilt one antivirus engines know)
+          pip install --no-binary pyinstaller "pyinstaller>=6.5"
 
       - name: Tests
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python -m pytest -q
+        run: |
+          pip install pytest
+          python -m pytest -q
 
-      - name: Build exe
+      - name: Build app folder
         run: pyinstaller FloorPlanStudio.spec --noconfirm
 
-      - name: Smoke test the exe
+      - name: Smoke test
         shell: pwsh
         run: |
           $env:QT_QPA_PLATFORM = "offscreen"
-          $p = Start-Process -FilePath dist\FloorPlanStudio.exe -ArgumentList "--selftest", "selftest_out" -Wait -PassThru
+          $p = Start-Process -FilePath dist\FloorPlanStudio\FloorPlanStudio.exe -ArgumentList "--selftest", "selftest_out" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "selftest exit code $($p.ExitCode)" }
           if (-not (Test-Path selftest_out\selftest_ok.txt)) { throw "selftest did not finish" }
           Get-ChildItem selftest_out
 
+      - name: Installer + portable zip
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          $env:APP_VERSION = (python -c "import floorplan; print(floorplan.__version__)")
+          & $iscc installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+          Compress-Archive -Path dist\FloorPlanStudio -DestinationPath dist\FloorPlanStudio-portable.zip -Force
+          Get-ChildItem dist
+
       - uses: actions/upload-artifact@v4
         with:
           name: FloorPlanStudio-windows
-          path: dist/FloorPlanStudio.exe
+          path: |
+            dist/FloorPlanStudio-Setup.exe
+            dist/FloorPlanStudio-portable.zip
 
       - name: Publish to Releases (latest)
         shell: bash
@@ -50,7 +68,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest dist/FloorPlanStudio.exe \
+          gh release create latest dist/FloorPlanStudio-Setup.exe dist/FloorPlanStudio-portable.zip \
             --title "Floor Plan Studio - latest build" \
-            --notes "Windows build of commit ${GITHUB_SHA::7}. Download FloorPlanStudio.exe and double-click it. / نزّل الملف وافتحه بدبل كليك." \
+            --notes "Windows build of commit ${GITHUB_SHA::7}.
+          - FloorPlanStudio-Setup.exe: installer (recommended) / برنامج التثبيت (مُفضّل)
+          - FloorPlanStudio-portable.zip: no install, unzip and run FloorPlanStudio.exe / بدون تثبيت: فك الضغط وشغّل" \
             --target "$GITHUB_SHA"

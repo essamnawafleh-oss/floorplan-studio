@@ -26,14 +26,16 @@ A rule-based house floor plan generator. Give it dimensions, room areas or a hou
 
 ![Floor Plan Studio](docs/screenshot_ar.png)
 
-### تنزيل ملف exe لويندوز (الأسهل)
+### التنزيل لويندوز (الأسهل)
 
-1. افتح صفحة **[Releases](https://github.com/essamnawafleh-oss/floorplan-studio/releases/tag/latest)**.
-2. نزّل **`FloorPlanStudio.exe`** وافتحه بدبل كليك. ما بتحتاج تثبّت بايثون ولا أي إشي ثاني.
-   - أول مرة ممكن ويندوز يطلعلك "Windows protected your PC". هاد طبيعي لأي برنامج جديد مش موقّع رقمياً: اكبس **More info** وبعدين **Run anyway**.
-   - الفتح بياخد كم ثانية، لأنه البرنامج كله ملف واحد.
+من صفحة **[Releases](https://github.com/essamnawafleh-oss/floorplan-studio/releases/tag/latest)** نزّل واحد من هدول:
 
-ملف الـ exe بينبني تلقائياً على GitHub مع كل تحديث للكود.
+- **`FloorPlanStudio-Setup.exe`** (المفضّل): برنامج تثبيت عادي. ما بيحتاج صلاحيات المدير، وبيعمل أيقونة بقائمة ابدأ وعلى سطح المكتب، والإزالة بتكون من إعدادات ويندوز.
+- **`FloorPlanStudio-portable.zip`**: نسخة بدون تثبيت. فك الضغط وشغّل `FloorPlanStudio.exe` من جوا المجلد.
+
+> البرنامج لسا **مش موقّع رقمياً**، فكروم أو ويندوز ممكن يطلعوا تحذير لأنه ملف جديد. هاد إنذار خاطئ، ورح ينحل نهائياً لما يتوقّع البرنامج أو ينزل على متجر مايكروسوفت.
+
+ملفات التنزيل بتنبني تلقائياً على GitHub مع كل تحديث للكود.
 
 ### شو بيعمل البرنامج
 
@@ -142,7 +144,7 @@ python FloorPlanStudio.py
 
 ```bash
 pip install -r requirements-gui.txt
-pyinstaller FloorPlanStudio.spec --noconfirm     # الملف بيطلع بمجلد dist/
+pyinstaller FloorPlanStudio.spec --noconfirm     # البرنامج بيطلع بمجلد dist/FloorPlanStudio/
 ```
 
 ## التشغيل من سطر الأوامر / Command line
