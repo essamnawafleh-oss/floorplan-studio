@@ -19,33 +19,62 @@ MIN_ROW = 2.8          # minimum depth of a bedroom row (m)
 
 def generate(specs: list[RoomSpec], width: float, depth: float, seed: int = 0,
              settings: dict | None = None, rules_name: str = "jordan",
-             candidates: int = 400, project: str = "", strict: bool = False) -> Plan:
+             candidates: int = 400, project: str = "", strict: bool = False, rules=None) -> Plan:
     """strict=True: only layouts that meet every hard rule (minimum width and
     area, proportions, window for habitable rooms, access) are accepted; the
-    search is longer. If none exists the closest one is returned with a note."""
-    rules = get_rules(rules_name)
+    search is longer. If none exists the closest one is returned with a note.
+    rules: optional rules object (see rules.with_overrides); default rules_name."""
+    return generate_many(specs, width, depth, seed, settings, rules_name, candidates, project, strict,
+                         rules=rules, keep=1)[0]
+
+
+def generate_many(specs: list[RoomSpec], width: float, depth: float, seed: int = 0,
+                  settings: dict | None = None, rules_name: str = "jordan",
+                  candidates: int = 400, project: str = "", strict: bool = False,
+                  rules=None, keep: int = 5) -> list[Plan]:
+    """Same search as `generate`, returning up to `keep` distinct plans, best
+    first. Element 0 is exactly what `generate` returns for the same inputs."""
+    rules = rules or get_rules(rules_name)
     st = {**rules.DEFAULT_SETTINGS, **(settings or {})}
     rng = random.Random(seed)
-    best: Plan | None = None
     key = (lambda p: (p._hard, p.score)) if strict else (lambda p: p.score)
+    top: list[tuple] = []                 # (key, order, signature, plan), sorted
     for i in range(candidates * (8 if strict else 1)):
-        if strict and i >= candidates and best is not None and best._hard == 0:
+        if strict and i >= candidates and top and top[0][3]._hard == 0:
             break                      # found a fully valid layout after the normal search
         rects = _candidate(specs, width, depth, st, rng)
         if rects is None:
             continue
         plan = _build(specs, rects, width, depth, st, rules)
         plan.score, plan.warnings = evaluate(plan, rules)
-        if best is None or key(plan) < key(best):
-            best = plan
-    if best is None:
+        k = key(plan)
+        if len(top) == keep and not k < top[-1][0]:
+            continue
+        sig = signature(plan)
+        same = next((j for j, t in enumerate(top) if t[2] == sig), None)
+        if same is not None:              # same layout found again: keep the better copy
+            if not k < top[same][0]:
+                continue
+            top.pop(same)
+        top.append((k, i, sig, plan))
+        top.sort(key=lambda t: (t[0], t[1]))
+        del top[keep:]
+    if not top:
         raise ValueError("Could not lay out this programme in the given footprint")
-    if strict and best._hard:
-        best.warnings.insert(0, dict(
-            ar="الوضع الصارم: ما في توزيع بيحقق كل الشروط بهاي الأبعاد. كبّر المبنى أو احذف غرفة، أو جرّب Seed ثاني.",
-            en="Strict mode: no layout meets every rule in this footprint. Enlarge it, remove a room or try another seed."))
-    best.seed, best.project = seed, project
-    return best
+    plans = [t[3] for t in top]
+    for plan in plans:
+        if strict and plan._hard:
+            plan.warnings.insert(0, dict(
+                ar="الوضع الصارم: ما في توزيع بيحقق كل الشروط بهاي الأبعاد. كبّر المبنى أو احذف غرفة، أو جرّب Seed ثاني.",
+                en="Strict mode: no layout meets every rule in this footprint. Enlarge it, remove a room or try another seed."))
+        plan.seed, plan.project = seed, project
+    return plans
+
+
+def signature(plan: Plan, step: float = 0.05) -> tuple:
+    """Layout identity at 5 cm resolution (used to drop duplicate candidates)."""
+    q = lambda v: round(v / step)
+    return tuple(sorted((r.id, q(r.rect.x0), q(r.rect.y0), q(r.rect.x1), q(r.rect.y1)) for r in plan.rooms))
 
 
 # --- candidate generation ----------------------------------------------------
@@ -271,12 +300,22 @@ def _build(specs, rects, W, D, st, rules) -> Plan:
     return plan
 
 
+def build_from_rects(specs, rects: dict[str, Rect], W, D, settings, rules) -> Plan:
+    """Plan from room rectangles, with doors and windows planned and scored
+    exactly as during generation."""
+    plan = _build(specs, rects, W, D, settings, rules)
+    plan.score, plan.warnings = evaluate(plan, rules)
+    return plan
+
+
 # --- scoring -----------------------------------------------------------------
 def evaluate(plan: Plan, rules) -> tuple[float, list[dict]]:
     """Lower is better. Also returns human readable warnings (ar/en)."""
     st, stats = plan.settings, plan._stats
     te = st["exterior_wall"]
     score, warn, hard = 0.0, [], 0
+    terms = dict(area=0.0, proportion=0.0, width=0.0, min_area=0.0, window=0.0, ventilation=0.0,
+                 access=0.0, circulation=0.0, adjacency=0.0, entrance=0.0)
     windows = {o.rooms[0] for o in plan.openings if o.kind == "window"}
     types = {r.spec.type for r in plan.rooms}
 
@@ -288,11 +327,13 @@ def evaluate(plan: Plan, rules) -> tuple[float, list[dict]]:
             continue
         dev = abs(n.area - r.spec.area) / r.spec.area
         score += dev * (8 if r.spec.fixed else 2)
+        terms["area"] += dev * (8 if r.spec.fixed else 2)
         if r.spec.fixed and dev > 0.05:
             warn.append(dict(ar=f"{ar_name}: المساحة {n.area:.1f} م² بدل {r.spec.area:.1f} م² المطلوبة",
                              en=f"{en_name}: {n.area:.1f} m² instead of the fixed {r.spec.area:.1f} m²"))
         if n.aspect > info["max_aspect"]:
             score += (n.aspect - info["max_aspect"]) * 4
+            terms["proportion"] += (n.aspect - info["max_aspect"]) * 4
             if n.aspect > info["max_aspect"] + 0.3:
                 hard += 1
                 warn.append(dict(ar=f"{ar_name}: الغرفة طويلة وضيقة ({n.w:.2f}×{n.h:.2f})",
@@ -300,29 +341,35 @@ def evaluate(plan: Plan, rules) -> tuple[float, list[dict]]:
         if n.short < info["min_width"]:
             hard += 1
             score += (info["min_width"] - n.short) * 15
+            terms["width"] += (info["min_width"] - n.short) * 15
             warn.append(dict(ar=f"{ar_name}: العرض {n.short:.2f} م أقل من الحد الأدنى {info['min_width']} م",
                              en=f"{en_name}: width {n.short:.2f} m below minimum {info['min_width']} m"))
         if n.area < info["min_area"]:
             hard += 1
             score += (info["min_area"] - n.area) / info["min_area"] * 15
+            terms["min_area"] += (info["min_area"] - n.area) / info["min_area"] * 15
             warn.append(dict(ar=f"{ar_name}: المساحة {n.area:.1f} م² أقل من الحد الأدنى {info['min_area']} م²",
                              en=f"{en_name}: {n.area:.1f} m² below minimum {info['min_area']} m²"))
         if info["habitable"] and r.id not in windows:
             hard += 1
             score += 15
+            terms["window"] += 15
             warn.append(dict(ar=f"{ar_name}: ما في شباك على واجهة خارجية",
                              en=f"{en_name}: no window on an exterior wall"))
         elif r.spec.type in WET and r.id not in windows:
             score += 1.0
+            terms["ventilation"] += 1.0
             warn.append(dict(ar=f"{ar_name}: بدون شباك - بحاجة لتهوية ميكانيكية",
                              en=f"{en_name}: no window - needs mechanical ventilation"))
 
     for rid in stats["unreached"]:
         r = plan.room(rid)
         score += 100
+        terms["access"] += 100
         hard += 1
         warn.append(dict(ar=f"{r.spec.name_ar}: ما في طريق للوصول إليها", en=f"{r.spec.name_en}: not reachable"))
     score += stats["detours"] * 7 + stats["through_private"] * 25
+    terms["circulation"] += stats["detours"] * 7 + stats["through_private"] * 25
     hard += stats["through_private"]
     if stats["through_private"]:
         warn.append(dict(ar="في غرفة الدخول إلها من خلال غرفة نوم", en="A room is reached through a bedroom"))
@@ -334,13 +381,18 @@ def evaluate(plan: Plan, rules) -> tuple[float, list[dict]]:
     for a, b, wgt in rules.ADJACENCY_WISHES:
         if a in first and b in first and first[b] not in adj.get(first[a], {}):
             score += wgt
+            terms["adjacency"] += wgt
     if "entrance" in types and stats.get("main_in") != "entrance":
         score += 18
+        terms["entrance"] += 18
         warn.append(dict(ar="الباب الرئيسي مش داخل على المدخل", en="Main door does not open into the entrance"))
     if stats.get("main_side") != "front":
         score += 10
+        terms["entrance"] += 10
         warn.append(dict(ar="الباب الرئيسي مش على الواجهة الأمامية", en="Main door is not on the front"))
     if "salon" in first and "front" not in exterior_segments(plan.room(first["salon"]).rect, plan.width, plan.depth, te):
         score += 3
+        terms["entrance"] += 3
     plan._hard = hard
+    plan._terms = terms
     return score, warn
