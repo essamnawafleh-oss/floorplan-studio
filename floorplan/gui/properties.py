@@ -7,7 +7,6 @@ from PySide6.QtWidgets import (QComboBox, QDoubleSpinBox, QFormLayout, QHBoxLayo
 
 from .. import editing
 from ..i18n import room_name
-from ..models import Segment
 from .panels import ROOM_ORDER
 from .strings import tr
 
@@ -44,6 +43,9 @@ class PropertiesPanel(QWidget):
         ed, plan, sel = self.editor, self.editor.plan, self.editor.selection
         if not ed.enabled:
             form.addRow(self._muted(self.t("props_need_edit")))
+            return
+        if plan is not None and sel is None and ed.cad.sel:
+            self._cad_props(form, plan, sorted(i for i in ed.cad.sel if 0 <= i < len(plan.drawing)))
             return
         if plan is None or sel is None:
             form.addRow(self._muted(self.t("props_hint")))
@@ -157,6 +159,63 @@ class PropertiesPanel(QWidget):
             row.addWidget(r90)
             row.addWidget(delete)
             form.addRow(self._wrap(row))
+
+    def _cad_props(self, form, plan, idx):
+        from PySide6.QtGui import QColor
+        from PySide6.QtWidgets import QColorDialog
+        from ..cad import LAYERS
+        ed = self.editor
+        title = QLabel(f"{len(idx)} {self.t('cad_selected')}")
+        title.setStyleSheet("font-weight:600;font-size:14px")
+        form.addRow(title)
+        if not idx:
+            return
+        first = plan.drawing[idx[0]]
+        layer = QComboBox()
+        for name in LAYERS:
+            layer.addItem(name, name)
+        layer.setCurrentIndex(max(0, layer.findData(first.get("layer", "A-DRAW"))))
+        form.addRow(self.t("layer"), layer)
+
+        def set_all(key, value):
+            def fn(p):
+                for i in idx:
+                    p.drawing[i] = {**p.drawing[i], key: value}
+            ed.apply(fn)
+        layer.currentIndexChanged.connect(lambda *_: set_all("layer", layer.currentData()))
+        color = QPushButton(first.get("color") or "ByLayer")
+        def pick():
+            c = QColorDialog.getColor(QColor(first.get("color") or LAYERS.get(first.get("layer", ""), "#3a3d42")), self)
+            if c.isValid():
+                set_all("color", c.name())
+        color.clicked.connect(pick)
+        reset = QPushButton("ByLayer")
+        reset.clicked.connect(lambda: set_all("color", ""))
+        row = QHBoxLayout()
+        row.addWidget(color, 1)
+        row.addWidget(reset)
+        form.addRow(self.t("color"), self._wrap(row))
+        if len(idx) == 1:
+            i, e = idx[0], first
+            if e["t"] == "text":
+                txt, h = QLineEdit(e["s"]), _spin(0.02, 10, e["h"], 0.05, 3)
+                form.addRow(self.t("text"), txt)
+                form.addRow(self.t("height"), h)
+                txt.editingFinished.connect(lambda: ed.apply(lambda p: p.drawing.__setitem__(i, {**p.drawing[i], "s": txt.text()})))
+                h.valueChanged.connect(lambda v: ed.apply(lambda p: p.drawing.__setitem__(i, {**p.drawing[i], "h": v})))
+            elif e["t"] in ("circle", "arc"):
+                r = _spin(0.001, 500, e["r"], 0.05, 3)
+                form.addRow(self.t("radius"), r)
+                r.valueChanged.connect(lambda v: ed.apply(lambda p: p.drawing.__setitem__(i, {**p.drawing[i], "r": v})))
+            elif e["t"] == "line":
+                from ..cad import dist
+                x1, y1, x2, y2 = e["p"]
+                import math
+                form.addRow(self._muted(f"{self.t('length')}: {dist((x1, y1), (x2, y2)):.3f} m · "
+                                        f"{math.degrees(math.atan2(y2 - y1, x2 - x1)) % 360:.1f}°"))
+        delete = QPushButton("🗑 " + self.t("delete"))
+        delete.clicked.connect(lambda: ed.cad.start("Erase"))
+        form.addRow(delete)
 
     @staticmethod
     def _wrap(layout):

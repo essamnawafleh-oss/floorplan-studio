@@ -120,6 +120,17 @@ S = {
     "paper": ("حجم الورق", "Paper"),
     "pdf_too_big": ("المخطط ما بيوسع على هاي الورقة بهاد المقياس. اختار ورقة أكبر أو مقياس أصغر.",
                     "The plan does not fit this paper at this scale. Choose larger paper or a smaller scale."),
+    # CAD
+    "cad_draw": ("رسم", "Draw"), "cad_modify": ("تعديل", "Modify"), "layer": ("الطبقة", "Layer"),
+    "cad_line": ("خط", "Line"), "cad_pline": ("بولي لاين", "Polyline"), "cad_rect": ("مستطيل", "Rectangle"),
+    "cad_circle": ("دائرة", "Circle"), "cad_arc": ("قوس", "Arc"), "cad_text": ("نص", "Text"),
+    "cad_dim": ("بُعد", "Dimension"), "cad_offset": ("أوفست", "Offset"), "cad_trim": ("قص", "Trim"),
+    "cad_extend": ("تمديد", "Extend"), "cad_explode": ("تفكيك", "Explode"), "cad_move": ("تحريك", "Move"),
+    "cad_copy": ("نسخ", "Copy"), "cad_rotate": ("تدوير", "Rotate"), "cad_scale": ("تكبير", "Scale"),
+    "cad_mirror": ("مرآة", "Mirror"), "cad_erase": ("مسح", "Erase"),
+    "cad_selected": ("عناصر CAD محددة", "CAD objects selected"),
+    "color": ("اللون", "Color"), "text": ("النص", "Text"), "height": ("الارتفاع م", "Height m"),
+    "radius": ("نصف القطر م", "Radius m"),
     # properties
     "props_need_edit": ("فعّل وضع التعديل لتعدّل على العناصر.", "Turn on edit mode to change elements."),
     "props_hint": ("اختار غرفة أو جدار أو باب أو شباك أو قطعة أثاث.", "Select a room, wall, door, window or furniture."),

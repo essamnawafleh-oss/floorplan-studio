@@ -14,6 +14,7 @@ from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QPixmap, QPolygonF
 from PySide6.QtWidgets import QGraphicsScene, QGraphicsSimpleTextItem, QGraphicsView
 
+from .. import cad
 from ..blocks import BUILTIN, furniture_polylines, opening_polylines
 from ..export.svg import _chain
 from ..geometry import door_geometry, walls
@@ -101,7 +102,7 @@ class PlanScene(QGraphicsScene):
 
     # -- main --
     def set_plan(self, plan: Plan | None, lang: str = "both", colors: dict | None = None,
-                 library=None, selection=None, scale_bar: bool = True):
+                 library=None, selection=None, scale_bar: bool = True, cad_sel=None):
         self.clear()
         self.overlay_items = []
         if colors:
@@ -196,11 +197,52 @@ class PlanScene(QGraphicsScene):
         self._dim(0, plan.depth, -1.15, "v")
         front = self._text("▲  FRONT / الواجهة", 22, color=c["dim"])
         self._center_text(front, P(plan.width / 2, 0).x(), P(0, -1.75).y())
+        for i, e in enumerate(plan.drawing):
+            col = e.get("color") or cad.LAYERS.get(e.get("layer", ""), c["ink"])
+            if c["paper"] != "#ffffff" and not e.get("color") and col in ("#3a3d42", "#5a5f66"):
+                col = c["ink"]                       # keep default ink readable on dark paper
+            self.draw_entity(e, QPen(QColor(col), 2), z=6)
+            if cad_sel and i in cad_sel:
+                self.draw_entity(e, QPen(QColor(c["select"]), 4, Qt.DashLine), z=7)
         if scale_bar:
             self._scale_bar(0.0, -2.35)
         if selection:
             self._draw_selection(plan, selection, blocks)
         self.setSceneRect(self.itemsBoundingRect().adjusted(-60, -60, 60, 60))
+
+    def draw_entity(self, e, pen, z=6, items=None):
+        """Draw one CAD entity; returns the created items."""
+        made = []
+        pen.setCosmetic(False)
+        if e["t"] == "text":
+            t = self._text(e["s"], e["h"] * S, color=pen.color().name(), z=z)
+            t.setPos(e["p"][0] * S, -(e["p"][1] + e["h"] * 1.25) * S)
+            if e.get("rot"):
+                t.setTransformOriginPoint(0, t.boundingRect().height())
+                t.setRotation(-e["rot"])
+            made.append(t)
+        else:
+            made.append(self._polylines(cad.polylines(e), pen, z))
+            if e["t"] == "dim":
+                q1, q2 = cad.dim_lines(e)[2]
+                ang = math.degrees(math.atan2(q2[1] - q1[1], q2[0] - q1[0]))
+                if ang > 90 or ang < -90:
+                    ang += 180
+                for q in (q1, q2):                      # architectural ticks
+                    a = math.radians(ang + 45)
+                    tick = [(q[0] - 0.06 * math.cos(a), q[1] - 0.06 * math.sin(a)),
+                            (q[0] + 0.06 * math.cos(a), q[1] + 0.06 * math.sin(a))]
+                    made.append(self._polylines([tick], QPen(pen.color(), pen.widthF() * 1.6), z))
+                t = self._text(f"{cad.dim_value(e):.2f}", 18, color=pen.color().name(), z=z)
+                b = t.boundingRect()
+                mx, my = (q1[0] + q2[0]) / 2, (q1[1] + q2[1]) / 2
+                t.setTransformOriginPoint(b.width() / 2, b.height())
+                t.setPos(mx * S - b.width() / 2, -my * S - b.height() - 2)
+                t.setRotation(-ang)
+                made.append(t)
+        if items is not None:
+            items += made
+        return made
 
     def _draw_selection(self, plan, sel, blocks):
         from ..blocks import furniture_footprint
@@ -232,6 +274,19 @@ class PlanScene(QGraphicsScene):
                 poly = QPolygonF([P(x, y) for x, y in furniture_footprint(b, f)])
                 self.addPolygon(poly, pen, QBrush(fill)).setZValue(5)
 
+    def _snap_marker(self, kind, at, label):
+        """AutoCAD-style marker, constant size on screen."""
+        view = self.views()[0] if self.views() else None
+        k = 1.0 / max(view.transform().m11(), 1e-6) if view else 1.0
+        x, y = at[0] * S, -at[1] * S
+        it = self.addPath(_marker_path(kind, x, y, 7 * k), QPen(QColor("#2f9e44"), 2.4 * k))
+        it.setZValue(20)
+        self.overlay_items.append(it)
+        if label:
+            t = self._text(label, 13 * k, True, "#2f9e44", z=20)
+            t.setPos(x + 10 * k, y + 8 * k)
+            self.overlay_items.append(t)
+
     # -- overlay (measurements, rubber bands) --
     def clear_overlay(self):
         for it in self.overlay_items:
@@ -244,6 +299,29 @@ class PlanScene(QGraphicsScene):
         self.clear_overlay()
         col = QColor("#e8590c")
         for sh in shapes:
+            if "ents" in sh:                       # command preview (rubber band)
+                for e in sh["ents"]:
+                    self.draw_entity(e, QPen(QColor("#2f6fd6"), 2, Qt.DashLine), z=14, items=self.overlay_items)
+                continue
+            if "box" in sh:
+                x0, y0, x1, y1 = sh["box"]
+                crossing = sh.get("crossing")
+                fill = QColor("#2b8a3e" if crossing else "#2f6fd6")
+                fill.setAlpha(35)
+                pen = QPen(QColor("#2b8a3e" if crossing else "#2f6fd6"), 2, Qt.DashLine if crossing else Qt.SolidLine)
+                it = self.addRect(QRectF(P(min(x0, x1), max(y0, y1)), P(max(x0, x1), min(y0, y1))), pen, QBrush(fill))
+                it.setZValue(15)
+                self.overlay_items.append(it)
+                continue
+            if "grips" in sh:
+                for gx, gy in sh["grips"]:
+                    it = self.addRect(gx * S - 6, -gy * S - 6, 12, 12, QPen(QColor("#ffffff"), 1), QBrush(QColor("#2f6fd6")))
+                    it.setZValue(16)
+                    self.overlay_items.append(it)
+                continue
+            if "marker" in sh:
+                self._snap_marker(sh["marker"], sh["at"], sh.get("label", ""))
+                continue
             pts = sh.get("pts", [])
             if len(pts) >= 2:
                 path = QPainterPath(P(*pts[0]))
@@ -275,6 +353,44 @@ class PlanScene(QGraphicsScene):
                 bg.setPos(x * S - b.width() / 2 - 6, -y * S - b.height() / 2 - 2)
                 t.setPos(x * S - b.width() / 2, -y * S - b.height() / 2)
                 self.overlay_items += [t, bg]
+
+
+def _marker_path(kind, x, y, r):
+    path = QPainterPath()
+    if kind in ("end", "ins", "grid"):
+        path.addRect(x - r, y - r, 2 * r, 2 * r)
+    elif kind == "mid":
+        path.moveTo(x, y - r)
+        path.lineTo(x + r, y + r)
+        path.lineTo(x - r, y + r)
+        path.closeSubpath()
+    elif kind == "cen":
+        path.addEllipse(QPointF(x, y), r, r)
+    elif kind == "quad":
+        path.moveTo(x, y - r)
+        path.lineTo(x + r, y)
+        path.lineTo(x, y + r)
+        path.lineTo(x - r, y)
+        path.closeSubpath()
+    elif kind == "int":
+        path.moveTo(x - r, y - r)
+        path.lineTo(x + r, y + r)
+        path.moveTo(x + r, y - r)
+        path.lineTo(x - r, y + r)
+    elif kind == "perp":
+        path.moveTo(x - r, y - r)
+        path.lineTo(x - r, y + r)
+        path.lineTo(x + r, y + r)
+        path.moveTo(x - r, y)
+        path.lineTo(x, y)
+        path.lineTo(x, y + r)
+    else:                                   # nearest: hourglass
+        path.moveTo(x - r, y - r)
+        path.lineTo(x + r, y - r)
+        path.lineTo(x - r, y + r)
+        path.lineTo(x + r, y + r)
+        path.closeSubpath()
+    return path
 
 
 class PlanView(QGraphicsView):
@@ -336,8 +452,15 @@ class PlanView(QGraphicsView):
             self.handler.double(*self._m(e))
 
     def keyPressEvent(self, e):
-        if not (self.handler and self.handler.key(e.key(), e.modifiers())):
-            super().keyPressEvent(e)
+        if self.handler and self.handler.key(e.key(), e.modifiers()):
+            return
+        text = e.text()
+        cl = getattr(self, "command_line", None)
+        if cl is not None and self.handler and self.handler.enabled and text and text.isprintable() \
+                and not (e.modifiers() & (Qt.ControlModifier | Qt.AltModifier)):
+            cl.type_char(text)                  # typing anywhere goes to the command line (AutoCAD)
+            return
+        super().keyPressEvent(e)
 
     def wheelEvent(self, e):
         f = 1.15 if e.angleDelta().y() > 0 else 1 / 1.15

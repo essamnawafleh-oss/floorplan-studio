@@ -54,6 +54,7 @@ class Editor(QObject):
     overlayChanged = Signal()     # only measurement / rubber band changed
     selectionChanged = Signal()
     message = Signal(str)
+    togglesChanged = Signal()
 
     def __init__(self, library, parent=None):
         super().__init__(parent)
@@ -71,6 +72,10 @@ class Editor(QObject):
         self.cursor_pt = None
         self.snap_pt = None
         self._drag = None
+        self._box_start = None
+        self.lang = "ar"
+        from .cad_tools import Cad
+        self.cad = Cad(self)
 
     # -- state --
     def set_plan(self, plan: Plan | None, keep_history: bool = False):
@@ -82,6 +87,9 @@ class Editor(QObject):
         self.selectionChanged.emit()
 
     def set_tool(self, tool: str):
+        if tool != "cad" and self.cad.cmd is not None:
+            self.cad.cancel(quiet=True)
+            self.cad.finish()
         self.tool = tool
         self.points = []
         self._drag = None
@@ -186,6 +194,8 @@ class Editor(QObject):
     def press(self, x, y, mods, tol) -> bool:
         if not self.plan:
             return False
+        if self.enabled and self.tool in ("select", "cad") and self.cad.press(x, y, mods, tol):
+            return True
         if self.tool in ("measure_len", "measure_area"):
             last = self.points[-1] if self.points else None
             pt, _ = self.snap_point(x, y, tol, last if mods & Qt.ShiftModifier else None)
@@ -213,12 +223,15 @@ class Editor(QObject):
             return True
         h = self.hit(x, y, tol)
         self.selection = h
+        if not (mods & Qt.ShiftModifier):
+            self.cad.sel.clear()
         self.selectionChanged.emit()
         self.changed.emit()
         if h and h[0] in ("wall", "opening", "furniture"):
             self._drag = dict(kind=h[0], ref=h[1], start=(x, y), base=self.plan.to_dict(), moved=False)
             return True
-        return h is not None
+        self._box_start = (x, y)          # a drag from here becomes a window / crossing selection
+        return True
 
     def move(self, x, y, mods, tol, left_down):
         self.cursor_pt = (x, y)
@@ -231,6 +244,16 @@ class Editor(QObject):
             return Qt.CrossCursor
         if not self.enabled or not self.plan:
             return None
+        if self.cad.move(x, y, mods, tol):
+            return Qt.CrossCursor
+        if self._box_start and left_down and math.hypot(x - self._box_start[0], y - self._box_start[1]) > tol:
+            self.cad.begin_box(self._box_start)
+            self._box_start = None
+            self.selection = None
+            self.selectionChanged.emit()
+            return Qt.CrossCursor
+        if self.tool == "cad":
+            return Qt.CrossCursor
         if self._drag and left_down:
             self._drag_to(x, y, not (mods & Qt.AltModifier))
             return Qt.ClosedHandCursor
@@ -273,6 +296,9 @@ class Editor(QObject):
             self.changed.emit()
 
     def release(self, x, y):
+        self._box_start = None
+        if self.cad.release(x, y):
+            return
         d, self._drag = self._drag, None
         if d and d["moved"]:
             self.push_undo(d["base"])
@@ -294,6 +320,18 @@ class Editor(QObject):
         return False
 
     def key(self, key, mods) -> bool:
+        if self.enabled and key in (Qt.Key_F3, Qt.Key_F8, Qt.Key_F9):
+            attr = {Qt.Key_F3: "osnap", Qt.Key_F8: "ortho", Qt.Key_F9: "grid"}[key]
+            setattr(self.cad, attr, not getattr(self.cad, attr))
+            self.message.emit(f"{attr.upper()}: {'ON' if getattr(self.cad, attr) else 'OFF'}")
+            self.togglesChanged.emit()
+            return True
+        if key == Qt.Key_Escape and self.enabled and self.cad.cancel():
+            self.overlayChanged.emit()
+            return True
+        if self.enabled and key in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space) and not self.points:
+            self.cad.submit("")
+            return True
         if key == Qt.Key_Escape:
             if self.points:
                 self.points = []
@@ -311,7 +349,10 @@ class Editor(QObject):
         if not self.enabled:
             return False
         if key == Qt.Key_Delete:
-            self.delete_selection()
+            if self.cad.sel:
+                self.cad.start("Erase")
+            else:
+                self.delete_selection()
             return True
         if key == Qt.Key_R and self.selection and self.selection[0] == "furniture":
             self.rotate_furniture(90)
@@ -387,4 +428,6 @@ class Editor(QObject):
             shapes.append(dict(pts=pts, closed=closed, labels=labels))
         if self.snap_pt and self.tool in ("measure_len", "measure_area"):
             shapes.append(dict(pts=[], snap=self.snap_pt))
+        if self.enabled:
+            shapes += self.cad.overlay()
         return shapes

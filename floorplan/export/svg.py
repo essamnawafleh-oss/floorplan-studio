@@ -133,6 +133,22 @@ def to_svg(plan: Plan, lang: str = "both", scale: float = 60.0, library=None) ->
         if b:
             polys(furniture_polylines(b, f.x, f.y, f.rotation, f.scale), "furn")
 
+    from .. import cad
+    for e in plan.drawing:
+        col = e.get("color") or cad.LAYERS.get(e.get("layer", ""), "#3a3d42")
+        if e["t"] == "text":
+            x, y = t(*e["p"])
+            out.append(f'<text x="{x:.1f}" y="{y:.1f}" font-size="{e["h"] * scale:.1f}" fill="{col}" '
+                       f'transform="rotate({-e.get("rot", 0):.1f} {x:.1f} {y:.1f})" font-family="Arial">{escape(e["s"])}</text>')
+            continue
+        for pl in cad.polylines(e):
+            out.append('<polyline points="' + " ".join("%.1f,%.1f" % t(px, py) for px, py in pl)
+                       + f'" fill="none" stroke="{col}" stroke-width="1.2"/>')
+        if e["t"] == "dim":
+            q1, q2 = cad.dim_lines(e)[2]
+            x, y = t((q1[0] + q2[0]) / 2, (q1[1] + q2[1]) / 2)
+            out.append(f'<text x="{x:.1f}" y="{y - 4:.1f}" class="dimt" fill="{col}">{cad.dim_value(e):.2f}</text>')
+
     for r in plan.rooms:
         cx, cy = t(*r.net.center)
         names = [r.spec.name_ar] if lang == "ar" else [r.spec.name_en] if lang == "en" else [r.spec.name_ar, r.spec.name_en]

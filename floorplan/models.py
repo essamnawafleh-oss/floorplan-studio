@@ -135,6 +135,7 @@ class Plan:
     project: str = ""
     furniture: list[Furniture] = field(default_factory=list)
     edited: bool = False      # changed by hand in edit mode
+    drawing: list[dict] = field(default_factory=list)   # free CAD entities (see cad.py)
 
     def room(self, room_id: str) -> Room:
         return next(r for r in self.rooms if r.id == room_id)
@@ -161,6 +162,7 @@ class Plan:
                            sill=o.sill, head=o.head, block=o.block) for o in self.openings],
             furniture=[asdict(f) for f in self.furniture],
             edited=self.edited,
+            drawing=[dict(e) for e in self.drawing],
         )
 
     @classmethod
@@ -177,7 +179,8 @@ class Plan:
                    seed=d.get("seed", 0), score=d.get("score", 0.0), warnings=list(d.get("warnings", [])),
                    project=d.get("project", ""),
                    furniture=[Furniture(**f) for f in d.get("furniture", [])],
-                   edited=d.get("edited", False))
+                   edited=d.get("edited", False),
+                   drawing=[dict(e) for e in d.get("drawing", [])])
         return plan
 
     def copy(self) -> "Plan":

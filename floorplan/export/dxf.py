@@ -65,6 +65,7 @@ def to_dxf(plan: Plan, path: str, lang: str = "en", library=None) -> None:
         msp.add_arc(hinge, w, start, end, dxfattribs={"layer": "A-DOOR"})
 
     _furniture(doc, msp, plan, blocks)
+    _drawing(doc, msp, plan)
 
     for r in plan.rooms:
         n = r.net
@@ -123,3 +124,39 @@ def _furniture(doc, msp, plan, blocks):
             defined[b.id] = name
         msp.add_blockref(name, (f.x, f.y), dxfattribs={"layer": "A-FURN", "rotation": f.rotation,
                                                          "xscale": f.scale, "yscale": f.scale})
+
+
+def _drawing(doc, msp, plan):
+    """Free CAD entities drawn in edit mode, on their own layers."""
+    from ezdxf import colors
+    from .. import cad
+    hex2rgb = lambda h: (int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16))
+    for name, hexcol in cad.LAYERS.items():
+        if name not in doc.layers:
+            lay = doc.layers.add(name)
+            lay.rgb = hex2rgb(hexcol)
+    for e in plan.drawing:
+        attr = {"layer": e.get("layer") or "A-DRAW"}
+        if attr["layer"] not in doc.layers:
+            doc.layers.add(attr["layer"])
+        if e.get("color"):
+            attr["true_color"] = colors.rgb2int(hex2rgb(e["color"]))
+        t = e["t"]
+        if t == "line":
+            msp.add_line(e["p"][:2], e["p"][2:], dxfattribs=attr)
+        elif t == "pline":
+            msp.add_lwpolyline(e["pts"], close=bool(e.get("closed")), dxfattribs=attr)
+        elif t == "circle":
+            msp.add_circle(e["c"], e["r"], dxfattribs=attr)
+        elif t == "arc":
+            msp.add_arc(e["c"], e["r"], e["a0"], e["a1"], dxfattribs=attr)
+        elif t == "text":
+            msp.add_text(e["s"], height=e["h"], rotation=e.get("rot", 0),
+                         dxfattribs={**attr, "style": "PLAN"}).set_placement(e["p"])
+        elif t == "dim":
+            p1, p2, off = e["p1"], e["p2"], e["off"]
+            dx, dy = p2[0] - p1[0], p2[1] - p1[1]
+            L = math.hypot(dx, dy) or 1.0
+            k = ((off[0] - p1[0]) * -dy + (off[1] - p1[1]) * dx) / L
+            msp.add_aligned_dim(p1=p1, p2=p2, distance=k, dimstyle="EZDXF",
+                                override={"dimtxt": 0.15, "dimasz": 0.1, "dimdec": 2}, dxfattribs=attr).render()

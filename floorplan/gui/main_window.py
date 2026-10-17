@@ -21,6 +21,7 @@ from ..models import Plan
 from ..paths import user_dir
 from . import theme
 from .addons import AddonManager, AddonsDialog
+from .command_line import CommandLine
 from .editor import UNITS, Editor
 from .library_panel import LibraryPanel
 from .panels import InputPanel
@@ -30,6 +31,9 @@ from .settings_dialog import SettingsDialog, load_prefs, save_prefs
 from .strings import tr
 
 N_VARIANTS = 6
+CAD_DRAW = [("Line", "L"), ("Pline", "PL"), ("Rect", "REC"), ("Circle", "C"), ("Arc", "A"), ("Text", "T"), ("Dim", "DIM")]
+CAD_MODIFY = [("Offset", "O"), ("Trim", "TR"), ("Extend", "EX"), ("Explode", "X"), ("Move", "M"), ("Copy", "CO"),
+              ("Rotate", "RO"), ("Scale", "SC"), ("Mirror", "MI"), ("Erase", "E")]
 PAPERS = {"A4": QPageSize.A4, "A3": QPageSize.A3, "A2": QPageSize.A2, "A1": QPageSize.A1}
 SCALES = [0, 20, 50, 75, 100, 200, 500]          # 0 = fit
 
@@ -105,6 +109,7 @@ class MainWindow(QMainWindow):
         self.editor.overlayChanged.connect(self._overlay)
         self.editor.selectionChanged.connect(self._sync_table_selection)
         self.editor.message.connect(lambda m: self.status.setText(m))
+        self.editor.togglesChanged.connect(lambda: self.cmdline.sync_toggles())
         self.addons = AddonManager(self, self.settings,
                                    os.path.join(examples_dir, "addons") if examples_dir else None)
 
@@ -132,6 +137,7 @@ class MainWindow(QMainWindow):
     def _build(self, initial: dict, seed: int | None = None):
         QApplication.instance().setLayoutDirection(Qt.RightToLeft if self.lang == "ar" else Qt.LeftToRight)
         self.setWindowTitle(self.t("app"))
+        self.editor.lang = self.lang
         self._build_toolbars()
 
         self.panel = InputPanel(self.lang)
@@ -174,6 +180,9 @@ class MainWindow(QMainWindow):
         bar.addWidget(self.label_combo)
         cv.addLayout(bar)
         cv.addWidget(self.view, 1)
+        self.cmdline = CommandLine(self.editor.cad)
+        self.view.command_line = self.cmdline
+        cv.addWidget(self.cmdline)
         self.status = QLabel()
         self.status.setObjectName("status")
         cv.addWidget(self.status)
@@ -227,7 +236,7 @@ class MainWindow(QMainWindow):
         return a
 
     def _build_toolbars(self):
-        for name in ("toolbar", "edit_toolbar"):
+        for name in ("toolbar", "edit_toolbar", "cad_toolbar"):
             if hasattr(self, name):
                 self.removeToolBar(getattr(self, name))
         tb = self.addToolBar("main")
@@ -300,6 +309,29 @@ class MainWindow(QMainWindow):
         hint = QLabel("   " + self.t("edit_hint"))
         hint.setObjectName("muted")
         et.addWidget(hint)
+
+        self.addToolBarBreak()
+        ct = self.addToolBar("cad")
+        ct.setMovable(False)
+        self.cad_toolbar = ct
+        ct.addWidget(QLabel(" " + self.t("cad_draw") + ": "))
+        for name, alias in CAD_DRAW:
+            self._action(ct, self.t("cad_" + name.lower()), lambda _=False, n=name: self.cad_command(n),
+                         tip=f"{alias}  ·  {name.upper()}")
+        ct.addSeparator()
+        ct.addWidget(QLabel(" " + self.t("cad_modify") + ": "))
+        for name, alias in CAD_MODIFY:
+            self._action(ct, self.t("cad_" + name.lower()), lambda _=False, n=name: self.cad_command(n),
+                         tip=f"{alias}  ·  {name.upper()}")
+        ct.addSeparator()
+        ct.addWidget(QLabel(" " + self.t("layer") + " "))
+        self.layer_combo = QComboBox()
+        from ..cad import LAYERS
+        for name in LAYERS:
+            self.layer_combo.addItem(name, name)
+        self.layer_combo.setCurrentIndex(max(0, self.layer_combo.findData(self.editor.cad.layer)))
+        self.layer_combo.currentIndexChanged.connect(lambda: setattr(self.editor.cad, "layer", self.layer_combo.currentData()))
+        ct.addWidget(self.layer_combo)
         self.tool_actions.get(self.editor.tool, self.tool_actions["select"]).setChecked(True)
 
     def _build_variants(self) -> QWidget:
@@ -334,6 +366,10 @@ class MainWindow(QMainWindow):
         self.editor.enabled = on
         self.edit_action.setChecked(on)
         self.edit_toolbar.setVisible(on)
+        self.cad_toolbar.setVisible(on)
+        self.cmdline.setVisible(on)
+        if not on:
+            self.editor.cad.cancel()
         self.panel.setEnabled(not on)
         if not on and self.editor.tool not in ("measure_len", "measure_area"):
             self.set_tool("select")
@@ -356,6 +392,16 @@ class MainWindow(QMainWindow):
                  "window": "hint_window", "main_door": "hint_window", "block": "hint_block"}
         if tool in hints:
             self.status.setText(self.t(hints[tool]))
+
+    def cad_command(self, name: str):
+        if self.plan is None:
+            return
+        if not self.editor.enabled:
+            self.set_edit_mode(True)
+        for a in self.tool_actions.values():
+            a.setChecked(False)
+        self.editor.cad.start(name)
+        self.view.setFocus()
 
     def place_block(self, block_id: str):
         if self.plan is None:
@@ -438,7 +484,8 @@ class MainWindow(QMainWindow):
     # ----------------------------------------------------------- drawing
     def redraw(self, fit: bool = False):
         plan = self.plan
-        self.scene.set_plan(plan, self.label_lang, self.plan_colors, self.library, self.editor.selection)
+        self.scene.set_plan(plan, self.label_lang, self.plan_colors, self.library, self.editor.selection,
+                            cad_sel=self.editor.cad.sel)
         self._overlay()
         if fit:
             self.view.fit()
