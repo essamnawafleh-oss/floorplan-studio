@@ -154,7 +154,7 @@ class Plan:
             score=round(self.score, 3), gross_area=round(self.gross_area, 2),
             net_area=round(self.net_area, 2), settings=self.settings, warnings=self.warnings,
             rooms=[dict(id=r.id, type=r.spec.type, name_ar=r.spec.name_ar, name_en=r.spec.name_en,
-                        occupants=r.spec.occupants, target_area=round(r.spec.area, 2),
+                        occupants=r.spec.occupants, target_area=round(r.spec.area, 2), fixed=r.spec.fixed,
                         net_area=round(r.net.area, 2), width=round(r.net.w, 2), length=round(r.net.h, 2),
                         rect=asdict(r.rect), net=asdict(r.net)) for r in self.rooms],
             openings=[dict(kind=o.kind, rooms=list(o.rooms), width=round(o.width, 2),
@@ -170,6 +170,7 @@ class Plan:
         rooms = []
         for r in d["rooms"]:
             spec = RoomSpec(r["id"], r["type"], r.get("target_area", r["net_area"]), r.get("occupants", 0),
+                            fixed=bool(r.get("fixed", False)),   # older files have no "fixed"
                             name_ar=r.get("name_ar", ""), name_en=r.get("name_en", ""))
             rooms.append(Room(spec, Rect(**r["rect"]), Rect(**r["net"])))
         openings = [Opening(o["kind"], Segment(**o["seg"]), o["thickness"], tuple(o["rooms"]),

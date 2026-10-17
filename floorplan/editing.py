@@ -338,10 +338,12 @@ def door_stats(plan: Plan) -> dict:
                 main_side=side, adjacency=adj)
 
 
-def refresh(plan: Plan, rules_name: str = "jordan") -> None:
-    """Recompute net areas, score and warnings after edits."""
+def refresh(plan: Plan, rules_name: str = "jordan", mark_edited: bool = True) -> None:
+    """Recompute net areas, score and warnings after edits. mark_edited=False
+    re-evaluates without flagging the plan as changed by hand."""
     from .layout import evaluate
     refresh_geometry(plan)
     plan._stats = door_stats(plan)
     plan.score, plan.warnings = evaluate(plan, get_rules(rules_name))
-    plan.edited = True
+    if mark_edited:
+        plan.edited = True

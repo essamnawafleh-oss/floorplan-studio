@@ -86,3 +86,22 @@ def test_round_trip_after_edits(plan):
     refresh(plan)
     q = Plan.from_dict(plan.to_dict())
     assert q.to_dict() == plan.to_dict() and q.edited
+
+
+def test_fixed_flag_survives_round_trip_and_old_files():
+    cfg = json.loads((EX / "fixed_rooms.json").read_text(encoding="utf-8"))
+    p = design(cfg, seed=1, candidates=40)
+    assert any(r.spec.fixed for r in p.rooms)
+    q = Plan.from_dict(p.to_dict())
+    assert [r.spec.fixed for r in q.rooms] == [r.spec.fixed for r in p.rooms]
+    old = p.to_dict()
+    for r in old["rooms"]:
+        r.pop("fixed")                      # file written before the fix
+    assert not any(r.spec.fixed for r in Plan.from_dict(old).rooms)
+
+
+def test_refresh_can_skip_edited_flag(plan):
+    refresh(plan, mark_edited=False)
+    assert not plan.edited
+    refresh(plan)
+    assert plan.edited
