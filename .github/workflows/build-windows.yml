@@ -21,7 +21,7 @@ jobs:
 
       - name: Install
         run: |
-          pip install -r requirements.txt PySide6
+          pip install -r requirements.txt "PySide6>=6.8,<6.9"
           # PyInstaller with a bootloader compiled here (not the prebuilt one antivirus engines know)
           pip install --no-binary pyinstaller "pyinstaller>=6.5"
 

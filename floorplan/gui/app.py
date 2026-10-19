@@ -12,6 +12,54 @@ def resource_dir() -> str:
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+def isolate_qt() -> None:
+    """Make the frozen .exe use only its bundled Qt.
+
+    Other software (QGIS, Anaconda, some CAD tools) sets global Qt variables or
+    puts its own Qt DLLs on PATH; Qt then loads the wrong platform plugin and
+    fails with "no Qt platform plugin could be initialized".
+    """
+    if not getattr(sys, "frozen", False):
+        return
+    for var in ("QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH", "QT_QPA_PLATFORM",
+                "QML2_IMPORT_PATH", "QT_QPA_FONTDIR", "QT_DEBUG_PLUGINS"):
+        if var == "QT_QPA_PLATFORM" and "--selftest" in sys.argv:
+            continue
+        os.environ.pop(var, None)
+    base = os.path.join(resource_dir(), "PySide6")
+    for plugins in (os.path.join(base, "plugins"), os.path.join(base, "Qt", "plugins")):
+        if os.path.isdir(os.path.join(plugins, "platforms")):
+            os.environ["QT_PLUGIN_PATH"] = plugins
+            os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(plugins, "platforms")
+            break
+    if os.name == "nt":
+        # bundled DLLs first, and drop foreign Qt folders from PATH
+        os.environ["PATH"] = os.pathsep.join(
+            [base, resource_dir()] + [p for p in os.environ.get("PATH", "").split(os.pathsep)
+                                      if p and not os.path.exists(os.path.join(p, "Qt6Core.dll"))])
+        for d in (base, resource_dir()):
+            if os.path.isdir(d):
+                try:
+                    os.add_dll_directory(d)
+                except OSError:
+                    pass
+
+
+def log_startup_error() -> str:
+    """Write the traceback to %APPDATA%/FloorPlanStudio/startup_error.log."""
+    import traceback
+    folder = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "FloorPlanStudio")
+    path = os.path.join(folder, "startup_error.log")
+    try:
+        os.makedirs(folder, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(traceback.format_exc())
+            f.write("\npython %s  frozen=%s\n" % (sys.version, getattr(sys, "frozen", False)))
+    except OSError:
+        pass
+    return path
+
+
 def selftest(out_dir: str) -> int:
     """Headless check used by the build: engine + exports + window creation."""
     import json
@@ -52,6 +100,20 @@ def selftest(out_dir: str) -> int:
 
 
 def main() -> int:
+    isolate_qt()
+    try:
+        return _main()
+    except Exception:
+        path = log_startup_error()
+        if os.name == "nt" and getattr(sys, "frozen", False):
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(
+                None, "Floor Plan Studio could not start.\nDetails: " + path,
+                "Floor Plan Studio", 0x10)
+        raise
+
+
+def _main() -> int:
     if len(sys.argv) >= 2 and sys.argv[1] == "--selftest":
         return selftest(sys.argv[2] if len(sys.argv) > 2 else "selftest_out")
     from PySide6.QtGui import QIcon
