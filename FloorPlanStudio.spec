@@ -1,11 +1,22 @@
 # PyInstaller build file:  pyinstaller FloorPlanStudio.spec --noconfirm
 import sys
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_submodules
 
 datas = [("examples", "examples"), ("assets", "assets")]
 datas += collect_data_files("trimesh")
 datas += collect_data_files("ezdxf")
 hidden = collect_submodules("ezdxf.fonts") + ["shapely", "mapbox_earcut"]
+binaries = []
+# image -> plan: OpenCV, pdfium (PDF pages + text), RapidOCR (PaddleOCR models, offline) on onnxruntime
+datas += collect_data_files("rapidocr")
+hidden += collect_submodules("rapidocr.inference_engine.onnxruntime") + collect_submodules("rapidocr.ch_ppocr_det") \
+    + collect_submodules("rapidocr.ch_ppocr_rec") + collect_submodules("rapidocr.ch_ppocr_cls") \
+    + collect_submodules("rapidocr.utils") + ["cv2"]
+for pkg in ("pypdfium2", "pypdfium2_raw", "onnxruntime"):
+    d, b, h = collect_all(pkg)
+    datas += d
+    binaries += b
+    hidden += h
 # standard modules that user add-ons commonly import (the exe only bundles what it uses itself)
 hidden += ["csv", "statistics", "datetime", "decimal", "fractions", "itertools", "collections", "functools",
            "pathlib", "random", "string", "textwrap", "uuid", "zipfile", "sqlite3", "xml.etree.ElementTree",
@@ -14,10 +25,12 @@ hidden += ["csv", "statistics", "datetime", "decimal", "fractions", "itertools",
 a = Analysis(
     ["FloorPlanStudio.py"],
     datas=datas,
+    binaries=binaries,
     hiddenimports=hidden,
     excludes=["matplotlib", "tkinter", "PySide6.QtWebEngineCore", "PySide6.QtWebEngineWidgets",
               "PySide6.Qt3DCore", "PySide6.QtQuick", "PySide6.QtQml", "PySide6.QtMultimedia",
-              "PySide6.QtCharts", "PySide6.QtDataVisualization", "PySide6.QtPdf", "pytest", "IPython"],
+              "PySide6.QtCharts", "PySide6.QtDataVisualization", "PySide6.QtPdf", "pytest", "IPython",
+              "torch", "paddle", "openvino", "tensorrt", "MNN"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)

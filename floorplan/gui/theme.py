@@ -36,10 +36,10 @@ BUILTIN: dict[str, dict] = {
 PLAN = {
     "light": dict(paper="#ffffff", wall="#26282c", ink="#3a3d42", dim="#7a7f87", text="#22252a",
                   text2="#555a62", glass="#4a7fb5", window="#ffffff", select="#2f6fd6",
-                  zones={"public": "#f6ead7", "service": "#e3efe4", "private": "#e4ebf6", "circulation": "#f1f1ef"}),
+                  zones={"public": "#f6ead7", "service": "#e3efe4", "private": "#e4ebf6", "circulation": "#f1f1ef", "outdoor": "#e9f2f2"}),
     "dark": dict(paper="#1b1f24", wall="#d9dde3", ink="#c4cad2", dim="#8a929c", text="#eef1f4",
                  text2="#aab2bc", glass="#6aa7e6", window="#1b1f24", select="#4c8dff",
-                 zones={"public": "#3b3326", "service": "#28382b", "private": "#2a3344", "circulation": "#2a2d31"}),
+                 zones={"public": "#3b3326", "service": "#28382b", "private": "#2a3344", "circulation": "#2a2d31", "outdoor": "#263334"}),
 }
 
 DEFAULTS = dict(theme="system", accent="", font_family="Segoe UI", font_size=10, plan_theme="match")

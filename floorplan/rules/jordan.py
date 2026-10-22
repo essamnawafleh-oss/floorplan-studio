@@ -33,6 +33,8 @@ ROOM_TYPES: dict[str, dict] = {
     "bathroom":  dict(zone="private",     min_area=3.0,  min_width=1.5, max_aspect=2.6, habitable=False, window=0.0),
     "office":    dict(zone="private",     min_area=9.0,  min_width=2.7, max_aspect=1.8, habitable=True,  window=0.10),
     "corridor":  dict(zone="circulation", min_area=0.0,  min_width=1.1, max_aspect=99,  habitable=False, window=0.0),
+    # never generated: balconies / open areas of traced drawings
+    "balcony":   dict(zone="outdoor",     min_area=0.0,  min_width=0.8, max_aspect=99,  habitable=False, window=0.0),
 }
 
 # Which rooms a room prefers to be entered from (first = best).
@@ -47,6 +49,7 @@ ACCESS_FROM: dict[str, list[str]] = {
     "storage":  ["kitchen", "corridor", "entrance", "living"],
     "maid":     ["kitchen", "laundry", "living"],
     "corridor": ["living", "entrance", "dining", "salon"],
+    "balcony":  ["living", "salon", "master", "bedroom", "kitchen", "dining", "corridor"],
     "master":   ["corridor", "living"],
     "ensuite":  ["master"],
     "bedroom":  ["corridor", "living"],

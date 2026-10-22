@@ -93,6 +93,19 @@ def selftest(out_dir: str) -> int:
     win.param_candidates[:] = cands
     win.param_panel._show_candidates()
     win.leave_parametric()
+    # image -> plan: trace a drawing of the plan back, OCR on its labels (bundled models)
+    from floorplan.trace import analyse, from_array, ocr, synth, to_plan
+    img = synth.render(plan, 50, labels=True, dims=True)
+    traced = to_plan(analyse(from_array(img)), 1 / 50)
+    if abs(len(traced.rooms) - len(plan.rooms)) > 1:
+        raise RuntimeError(f"trace: {len(traced.rooms)} rooms, expected {len(plan.rooms)}")
+    words = ocr.run(img[: img.shape[0] // 2, : img.shape[1] // 2])
+    with open(os.path.join(out_dir, "trace.txt"), "w", encoding="utf-8") as f:
+        f.write(f"rooms {len(traced.rooms)} / {len(plan.rooms)}\nocr {ocr.engines()} {[t.text for t in words]}\n")
+    if not words:
+        raise RuntimeError("OCR read nothing")
+    win.enter_trace()
+    win.leave_trace()
     win.close()
     with open(os.path.join(out_dir, "selftest_ok.txt"), "w") as f:
         f.write("ok\n")

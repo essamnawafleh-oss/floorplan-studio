@@ -92,10 +92,12 @@ class MainWindow(QMainWindow):
         self.examples_dir = examples_dir
         self.req = 0
         self.var_req = 0
-        self.workspace = "design"            # "design" | "parametric"
+        self.workspace = "design"            # "design" | "parametric" | "trace"
         self.study: ParametricStudy | None = None
         self.param_candidates: list = []     # in-memory results; never part of the project plan
         self.param_panel = None
+        self.trace_state: dict = {}          # image -> plan workspace (in memory, never saved)
+        self.trace_panel = None
         self.project_path = None
         self.pool = QThreadPool.globalInstance()
         self.sig = _Signals()
@@ -234,6 +236,9 @@ class MainWindow(QMainWindow):
         if self.workspace == "parametric":
             self.param_panel = None
             self._show_parametric_page()
+        elif self.workspace == "trace":
+            self.trace_panel = None
+            self._show_trace_page()
         if self.plan is not None:
             self.redraw(fit=True)
 
@@ -270,6 +275,7 @@ class MainWindow(QMainWindow):
         tb.addSeparator()
         self.edit_action = self._action(tb, self.t("edit_mode"), self.set_edit_mode, checkable=True)
         self.param_action = self._action(tb, self.t("pm_mode"), self.toggle_parametric, checkable=True)
+        self.trace_action = self._action(tb, self.t("tr_mode"), self.toggle_trace, checkable=True)
         tb.addSeparator()
 
         self.tool_group = QActionGroup(self)
@@ -374,8 +380,8 @@ class MainWindow(QMainWindow):
 
     # ------------------------------------------------------------- modes / tools
     def set_edit_mode(self, on: bool):
-        if on and self.workspace == "parametric":
-            self.leave_parametric()
+        if on and self.workspace != "design":
+            self.leave_workspace()
         on = bool(on) and self.plan is not None
         self.editor.enabled = on
         self.edit_action.setChecked(on)
@@ -439,7 +445,7 @@ class MainWindow(QMainWindow):
 
     def regenerate(self):
         self.timer.stop()
-        if self.workspace == "parametric":       # the parametric workspace never replaces the project plan
+        if self.workspace != "design":           # the other workspaces never replace the project plan
             return
         if self.editor.enabled or not self._confirm_discard():
             return
@@ -636,6 +642,8 @@ class MainWindow(QMainWindow):
         self.timer.stop()
         if self.editor.enabled:
             self.set_edit_mode(False)
+        if self.workspace == "trace":
+            self.leave_trace()
         base = self._study_base()
         if self.study is None:
             self.study = ParametricStudy(base_config=base)
@@ -661,6 +669,7 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentWidget(self.param_panel)
         self.workspace = "parametric"
         self.param_action.setChecked(True)
+        self.trace_action.setChecked(False)
         self.status.setText(self.t("pm_on"))
 
     def leave_parametric(self):
@@ -690,7 +699,70 @@ class MainWindow(QMainWindow):
         self.redraw(fit=True)
         self.status.setText(self.t("pm_applied").format(rank=cand.rank, seed=cand.seed))
 
+    # ------------------------------------------------------------ image -> plan workspace
+    def leave_workspace(self):
+        if self.workspace == "parametric":
+            self.leave_parametric()
+        elif self.workspace == "trace":
+            self.leave_trace()
+
+    def toggle_trace(self, on: bool):
+        self.enter_trace() if on else self.leave_trace()
+
+    def enter_trace(self):
+        """Switch to the image -> plan workspace. The project plan is not touched."""
+        self.timer.stop()
+        if self.editor.enabled:
+            self.set_edit_mode(False)
+        if self.workspace == "parametric":
+            self.leave_parametric()
+        self._show_trace_page()
+
+    def _show_trace_page(self):
+        from .trace_panel import TracePanel
+        if self.trace_panel is not None:
+            self.trace_panel.shutdown()
+            self.stack.removeWidget(self.trace_panel)
+            self.trace_panel.deleteLater()
+        self.trace_panel = TracePanel(self, self.trace_state)
+        self.trace_panel.applyRequested.connect(self.apply_traced)
+        self.trace_panel.backRequested.connect(self.leave_trace)
+        self.stack.addWidget(self.trace_panel)
+        self.stack.setCurrentWidget(self.trace_panel)
+        self.workspace = "trace"
+        self.trace_action.setChecked(True)
+        self.param_action.setChecked(False)
+        self.status.setText(self.t("tr_on"))
+
+    def leave_trace(self):
+        if self.trace_panel is not None:
+            self.trace_panel.shutdown()
+        self.stack.setCurrentIndex(0)
+        if self.workspace == "trace":
+            self.workspace = "design"
+        self.trace_action.setChecked(False)
+
+    def apply_traced(self, plan: Plan):
+        """Replace the project plan with the traced one as ONE undoable step."""
+        if self.plan is not None and self.plan.edited:
+            ans = QMessageBox.question(self, self.t("app"), self.t("pm_confirm_replace"))
+            if ans != QMessageBox.Yes:
+                return
+        new = plan.copy()
+        new.warnings = list(plan.warnings)
+        new.score = plan.score
+        new.edited = True                         # not made from the input panel: saved with the project
+        if self.plan is not None:
+            self.editor.push_undo(self.plan.to_dict())
+        self.editor.set_plan(new, keep_history=True)
+        self.leave_trace()
+        self.set_edit_mode(True)
+        self.redraw(fit=True)
+        self.status.setText(self.t("tr_applied"))
+
     def closeEvent(self, e):
+        if self.trace_panel is not None:
+            self.trace_panel.shutdown()
         if self.param_panel is not None:
             self.param_panel.shutdown()
         self.sig.cancelled = True
@@ -708,8 +780,7 @@ class MainWindow(QMainWindow):
     def new_project(self):
         if not self._confirm_discard():
             return
-        if self.workspace == "parametric":
-            self.leave_parametric()
+        self.leave_workspace()
         self.study = None
         self.param_candidates.clear()
         self.set_edit_mode(False)
@@ -737,8 +808,7 @@ class MainWindow(QMainWindow):
 
     def open_config(self, cfg: dict):
         self.set_edit_mode(False)
-        if self.workspace == "parametric":
-            self.leave_parametric()
+        self.leave_workspace()
         self.param_candidates.clear()
         base = {k: v for k, v in cfg.items() if k not in PROJECT_KEYS_NOT_IN_STUDY}
         self.study = ParametricStudy.from_dict({**cfg["parametric"], "base_config": base}) \

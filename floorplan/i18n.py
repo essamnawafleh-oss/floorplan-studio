@@ -16,6 +16,7 @@ ROOM_NAMES = {
     "bathroom": ("حمام", "Bathroom"),
     "office":   ("مكتب", "Office"),
     "corridor": ("ممر", "Corridor"),
+    "balcony":  ("شرفة / فراغ", "Balcony / Open"),
 }
 
 TEXT = {
